@@ -14,6 +14,7 @@ import datetime
 import json
 import os
 import re
+import ssl
 import sys
 import urllib.error
 import urllib.parse
@@ -24,6 +25,8 @@ from xml.etree import ElementTree
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "catalogues")
 BUCKET = "catalogues"
+# O Python do python.org no Mac não vem com certificados; usa os do sistema
+SSL = ssl.create_default_context(cafile="/etc/ssl/cert.pem") if os.path.exists("/etc/ssl/cert.pem") else None
 
 
 def env():
@@ -56,7 +59,7 @@ def call(method, path, body=None, headers=None, raw=False):
         h["Content-Type"] = "application/json"
     req = urllib.request.Request(URL + path, data=data, method=method, headers=h)
     try:
-        with urllib.request.urlopen(req, timeout=120) as r:
+        with urllib.request.urlopen(req, timeout=120, context=SSL) as r:
             content = r.read()
     except urllib.error.HTTPError as e:
         sys.exit("Erro do Supabase (%s): %s" % (e.code, e.read().decode(errors="replace")[:300]))
