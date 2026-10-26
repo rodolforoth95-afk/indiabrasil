@@ -1,4 +1,4 @@
-# India Brazil – indiabrazil.com.br
+# India Brazil – indiabrasil.com.br
 
 Marketplace B2B (modelo concierge): fornecedores indianos se cadastram e recebem
 pedidos de orçamento (RFQs) de compradores brasileiros.
