@@ -262,7 +262,7 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:0 1rem 2rem
             <div class="field"><label for="state">State <span class="req">*</span></label><select id="state" name="state"><option value="">Select state</option></select><p class="err">Please select your state.</p></div>
             <div class="field"><label for="iec">IEC number <span class="req">*</span></label><input type="text" id="iec" name="iec" maxlength="10" placeholder="10 characters" style="text-transform:uppercase" autocomplete="off"><span class="hint">As shown on your DGFT IEC certificate</span><p class="err">IEC must be exactly 10 letters or numbers.</p></div>
             <div class="field"><label for="gstin">GSTIN <span class="opt">(optional)</span></label><input type="text" id="gstin" name="gstin" maxlength="15" placeholder="15 characters" style="text-transform:uppercase" autocomplete="off"><p class="err">Please enter a valid 15-character GSTIN.</p></div>
-            <div class="field full"><label for="website">Website <span class="opt">(optional)</span></label><input type="url" id="website" name="website" placeholder="https://" autocomplete="url"><p class="err">Please enter a valid web address starting with http.</p></div>
+            <div class="field full"><label for="website">Website <span class="opt">(optional)</span></label><input type="text" inputmode="url" id="website" name="website" placeholder="www.yourcompany.com" autocomplete="url" autocapitalize="off" spellcheck="false"><p class="err">Please enter a valid web address, e.g. www.yourcompany.com</p></div>
           </div>
         </section>
 
@@ -305,7 +305,7 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:0 1rem 2rem
               <span>Drag files here or click to browse. PDF, Excel, PowerPoint or images. Up to 25 MB per file, 5 files.</span>
             </label>
             <ul class="files" id="fileList" aria-live="polite"></ul>
-            <div style="margin-top:.9rem"><label for="catalogue_link">Or share a link <span class="opt">(Google Drive, Dropbox or website)</span></label><input type="url" id="catalogue_link" name="catalogue_link" placeholder="https://"></div>
+            <div style="margin-top:.9rem"><label for="catalogue_link">Or share a link <span class="opt">(Google Drive, Dropbox or website)</span></label><input type="text" inputmode="url" id="catalogue_link" name="catalogue_link" placeholder="drive.google.com/..." autocapitalize="off" spellcheck="false"></div>
             <p class="err" id="fileErr">Please attach your catalogue or share a link to it.</p>
           </div>
 
@@ -377,6 +377,9 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:0 1rem 2rem
   var NAMES=["Company","Contact","Products","Catalogue and review"];
   var $=function(id){return document.getElementById(id);};
   var val=function(id){return ($(id).value||"").trim();};
+  // Web addresses: http/https is optional; we add https:// when saving
+  var isWeb=function(v){return /^(https?:\/\/)?[^\s\/.]+(\.[^\s\/.]+)*\.[a-z]{2,}(\/\S*)?$/i.test(v);};
+  var web=function(v){return !v?null:(/^https?:\/\//i.test(v)?v:"https://"+v);};
 
   // Validation rules per step
   var RULES={
@@ -384,7 +387,7 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:0 1rem 2rem
        iec:function(v){return /^[A-Z0-9]{10}$/.test(v.toUpperCase());},
        gstin:function(v){return !v||/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(v.toUpperCase());},
        year_established:function(v){return !v||(+v>=1900&&+v<=2026);},
-       website:function(v){return !v||/^https?:\/\/[^\s.]+\.[^\s]{2,}/i.test(v);}},
+       website:function(v){return !v||isWeb(v);}},
     2:{contact_name:function(v){return v.length>1;},designation:function(v){return v.length>1;},
        email:function(v){return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);},
        mobile:function(v){return /^[6-9][0-9]{9}$/.test(v.replace(/\D/g,""));}},
@@ -396,7 +399,7 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:0 1rem 2rem
     Object.keys(r).forEach(function(id){var el=$(id),ok=r[id](val(id));setBad(el,!ok);if(!ok&&!first)first=el;});
     if(n===3){var any=form.querySelectorAll('input[name="categories"]:checked').length>0;$("f_categories").classList.toggle("bad",!any);if(!any&&!first)first=form.querySelector('input[name="categories"]');}
     if(n===4){
-      var has=files.length>0||/^https?:\/\/\S+\.\S+/.test(val("catalogue_link"));
+      var has=files.length>0||isWeb(val("catalogue_link"));
       $("fileErr").textContent="Please attach your catalogue or share a link to it.";
       $("f_files").classList.toggle("bad",!has); if(!has&&!first)first=$("files");
       var c=$("consent").checked; $("f_consent").classList.toggle("bad",!c); if(!c&&!first)first=$("consent");
@@ -449,14 +452,14 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:0 1rem 2rem
   function collect(){
     var q=new URLSearchParams(location.search);
     return {
-      company_name:val("company_name"), business_type:val("business_type")||null, website:val("website")||null,
+      company_name:val("company_name"), business_type:val("business_type")||null, website:web(val("website")),
       city:val("city"), state:val("state"), iec:val("iec").toUpperCase(), gstin:val("gstin").toUpperCase()||null,
       year_established:val("year_established")?parseInt(val("year_established"),10):null,
       contact_salutation:val("contact_salutation"), contact_name:val("contact_name"), designation:val("designation"),
       email:val("email").toLowerCase(), mobile:"+91"+val("mobile").replace(/\D/g,""), whatsapp:radio("whatsapp")==="yes",
       categories:checked("categories"), main_products:val("main_products"), certifications:checked("certifications"),
       export_turnover:val("export_turnover")||null, latam_experience:radio("latam_experience"),
-      catalogue_link:val("catalogue_link")||null, consent:$("consent").checked, consent_text:$("consentText").textContent,
+      catalogue_link:web(val("catalogue_link")), consent:$("consent").checked, consent_text:$("consentText").textContent,
       utm_source:q.get("utm_source"), utm_medium:q.get("utm_medium"), utm_campaign:q.get("utm_campaign"),
       user_agent:navigator.userAgent.slice(0,300)
     };
