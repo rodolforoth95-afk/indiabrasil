@@ -23,10 +23,18 @@ pedidos de orçamento (RFQs) de compradores brasileiros.
 ## Resumo de catálogos ("resuma o catálogo IB-XXXX")
 1. `python3 tools/catalogues.py pending` lista quem tem catálogo sem resumo.
 2. `python3 tools/catalogues.py download IB-XXXX` baixa para `catalogues/IB-XXXX/` (pasta fora do git).
-   Planilhas (.xlsx) e apresentações (.pptx) ganham um `.txt` ao lado; PDFs e imagens: ler direto.
+   Planilhas (.xlsx) e apresentações (.pptx) ganham um `.txt` ao lado; imagens: ler direto.
+   PDFs: `python3 tools/catalogues.py render IB-XXXX` gera `pages-<arquivo>/pNNN.jpg` + `text.txt`
+   (o Read de PDF não funciona neste Mac, falta poppler). Ler o text.txt inteiro e as páginas em JPG
+   onde há informação visual (cores, tabelas de medidas, preços em imagem).
    Se houver `catalogue_link`, tentar abrir (Drive/Dropbox públicos); se não abrir, anotar em `missing_info`.
 3. Ler TODO o catálogo e escrever o JSON abaixo num arquivo temporário (no scratchpad, não no projeto).
 4. `python3 tools/catalogues.py save IB-XXXX arquivo.json` grava em `catalogue_summaries`; aparece em /admin.
+
+Botão "Processar com IA" do /admin: grava um pedido em `catalogue_jobs` (status queued). Nada roda sozinho:
+o dono clica em Run now na tarefa "processar-catalogos-ia" (app Claude no Mac, sem agendamento) ou pede
+"processe a fila" numa conversa. Ela roda `python3 tools/catalogues.py queue`,
+marca `job IB-XXXX processing`, faz os passos 2–4 (o `save` marca done) e, se falhar, `job IB-XXXX error "motivo"`.
 
 Formato (textos em português; nomes de produto, SKUs e atributos como no catálogo; não inventar dados,
 o que não estiver no catálogo fica null e vai para `missing_info`):

@@ -68,3 +68,36 @@ create policy "admins read summaries"
   using (public.is_admin());
 
 revoke all on public.catalogue_summaries from anon;
+
+-- 5) Fila do botão "Processar com IA" do /admin
+--    O admin coloca o catálogo na fila; a tarefa do Claude no Mac (Run now) processa e marca como pronto.
+create table if not exists public.catalogue_jobs (
+  supplier_id  uuid primary key references public.suppliers (id) on delete cascade,
+  reference    text not null,
+  status       text not null default 'queued'
+               check (status in ('queued','processing','done','error')),
+  requested_at timestamptz not null default now(),
+  requested_by text,
+  started_at   timestamptz,
+  finished_at  timestamptz,
+  error        text
+);
+alter table public.catalogue_jobs enable row level security;
+
+drop policy if exists "admins read jobs" on public.catalogue_jobs;
+create policy "admins read jobs"
+  on public.catalogue_jobs for select to authenticated
+  using (public.is_admin());
+
+-- Pelo site o admin só consegue colocar na fila; o andamento é gravado pelo script (secret key)
+drop policy if exists "admins queue jobs" on public.catalogue_jobs;
+create policy "admins queue jobs"
+  on public.catalogue_jobs for insert to authenticated
+  with check (public.is_admin() and status = 'queued');
+
+drop policy if exists "admins requeue jobs" on public.catalogue_jobs;
+create policy "admins requeue jobs"
+  on public.catalogue_jobs for update to authenticated
+  using (public.is_admin()) with check (public.is_admin() and status = 'queued');
+
+revoke all on public.catalogue_jobs from anon;

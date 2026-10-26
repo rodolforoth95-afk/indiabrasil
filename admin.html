@@ -100,6 +100,11 @@ details.prod summary b{flex:1 1 220px}
 details.prod .body{padding:0 .9rem .9rem}
 ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
 .empty{padding:28px;text-align:center;color:var(--muted)}
+.ai{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .8rem}
+.btn-ai{background:var(--navy);color:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn-ai{background:var(--orange);color:#0F1A3D}}
+.btn[disabled]{opacity:.55;cursor:default;filter:none}
+.pill.err{background:rgba(180,35,24,.12);color:var(--error)}
 </style>
 </head>
 <body>
@@ -190,11 +195,32 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
 
   // --- Lista ---
   async function load(){
-    var r=await sb.from("suppliers").select("id,reference,created_at,status,company_name,city,state,catalogue_files,catalogue_link,catalogue_summaries(supplier_id)").order("created_at",{ascending:false});
+    var r=await sb.from("suppliers").select("id,reference,created_at,status,company_name,city,state,catalogue_files,catalogue_link,catalogue_summaries(supplier_id),catalogue_jobs(status,requested_at,error)").order("created_at",{ascending:false});
     if(r.error)return fail(r.error);
     all=r.data;
   }
-  function hasSum(s){var c=s.catalogue_summaries;return Array.isArray(c)?c.length>0:!!c;}
+  function one(v){return Array.isArray(v)?v[0]||null:v||null;}
+  function hasSum(s){return !!one(s.catalogue_summaries);}
+  function hasCat(s){return (s.catalogue_files||[]).length>0||!!s.catalogue_link;}
+
+  // --- Processar com IA: coloca na fila; a tarefa "processar-catalogos-ia" no Mac (Run now) lê e salva o resumo ---
+  var JOB={queued:["Na fila","warn"],processing:["Processando…","warn"],error:["Erro na IA","err"]};
+  function jobPill(j){var t=j&&JOB[j.status];return t?h("span",{class:"pill "+t[1],title:j.error||""},t[0]):null;}
+  async function requestAI(s){
+    var email=(await sb.auth.getSession()).data.session.user.email;
+    var r=await sb.from("catalogue_jobs").upsert({supplier_id:s.id,reference:s.reference,status:"queued",requested_at:new Date().toISOString(),requested_by:email,started_at:null,finished_at:null,error:null});
+    if(r.error)return fail(r.error);
+    var row=all.find(function(x){return x.id===s.id;});if(row)row.catalogue_jobs={status:"queued"};
+  }
+  function aiButton(s,job,after){
+    var busy=job&&(job.status==="queued"||job.status==="processing");
+    var b=h("button",{class:"btn btn-sm btn-ai",type:"button",onclick:async function(e){
+      e.stopPropagation();b.disabled=true;await requestAI(s);after();
+    }},hasSum(s)?"Reprocessar com IA":"Processar com IA");
+    b.disabled=busy||!hasCat(s);
+    if(!hasCat(s))b.title="Sem catálogo para processar";
+    return b;
+  }
   function renderList(){
     var q=$("q").value.trim().toLowerCase(),fs=$("fStatus").value,fm=$("fSum").value;
     var rows=all.filter(function(s){
@@ -209,7 +235,8 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
       tb.appendChild(h("tr",{class:"link",tabindex:"0",onclick:function(){location.hash="#/"+s.reference;},onkeydown:function(e){if(e.key==="Enter")location.hash="#/"+s.reference;}},[
         h("td",null,date(s.created_at)),h("td",{class:"mono"},s.reference),h("td",null,h("b",null,s.company_name)),
         h("td",null,txt([s.city,s.state].filter(Boolean).join(", "))),h("td",null,h("span",{class:"pill"+(s.status==="published"?" ok":"")},STATUS[s.status]||s.status)),
-        h("td",null,cat),h("td",null,hasSum(s)?h("span",{class:"pill ok"},"Pronto"):(n||s.catalogue_link)?h("span",{class:"pill warn"},"Pendente"):"–")
+        h("td",null,cat),h("td",null,h("div",{class:"ai"},[jobPill(one(s.catalogue_jobs))||(hasSum(s)?h("span",{class:"pill ok"},"Pronto"):hasCat(s)?h("span",{class:"pill"},"Pendente"):"–"),
+          hasCat(s)&&!hasSum(s)&&!jobPill(one(s.catalogue_jobs))?aiButton(s,null,renderList):null]))
       ]));
     });
     $("noRows").hidden=rows.length>0;
@@ -225,6 +252,9 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
     var s=r.data;
     var m=await sb.from("catalogue_summaries").select("summary,updated_at,generated_by").eq("supplier_id",s.id).maybeSingle();
     if(m.error)return fail(m.error);
+    var j=await sb.from("catalogue_jobs").select("status,requested_at,started_at,error").eq("supplier_id",s.id).maybeSingle();
+    if(j.error)return fail(j.error);
+    var job=j.data;s.catalogue_summaries=m.data?[m.data]:[];
 
     var st=h("select",{"aria-label":"Status",onchange:async function(){
       var u=await sb.from("suppliers").update({status:st.value}).eq("id",s.id);
@@ -256,10 +286,16 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
       h("div",{class:"card"},[h("h3",null,"Catálogos"),files])
     ]));
 
-    d.appendChild(m.data?summaryView(s,m.data):h("div",{class:"card empty"},[
-      h("p",null,"Ainda não há resumo padronizado deste catálogo."),
-      h("p",{class:"muted"},["Para gerar, peça ao Claude: “resuma o catálogo ",h("span",{class:"mono"},s.reference),"”."])
-    ]));
+    var again=function(){if(location.hash==="#/"+ref)renderDetail(ref).catch(fail);};
+    var msg=!hasCat(s)?"Este fornecedor não enviou catálogo.":
+      job&&job.status==="queued"?"Na fila desde "+new Date(job.requested_at).toLocaleString("pt-BR")+". Para processar: no app do Claude no Mac, abra Scheduled → “India Brazil – Processar catálogos com IA” → Run now. Depois recarregue esta página.":
+      job&&job.status==="processing"?"O Claude está lendo o catálogo. Catálogos grandes levam alguns minutos; recarregue a página para ver o resultado.":
+      job&&job.status==="error"?"A última tentativa falhou: "+(job.error||"erro desconhecido")+".":
+      m.data?"Gerar o resumo de novo substitui o atual.":"O Claude lê o catálogo inteiro e monta o resumo padronizado.";
+    d.appendChild(h("div",{class:"card",style:"margin-bottom:16px"},h("div",{class:"ai"},[
+      h("b",null,"Resumo com IA"),jobPill(job),h("span",{class:"muted",style:"flex:1 1 260px"},msg),aiButton(s,job,again)
+    ])));
+    if(m.data)d.appendChild(summaryView(s,m.data));
   }
   function dl(pairs){return h("dl",null,pairs.reduce(function(a,p){a.push(h("dt",null,p[0]),h("dd",null,p[1]&&p[1].nodeType?p[1]:txt(p[1])));return a;},[]));}
 

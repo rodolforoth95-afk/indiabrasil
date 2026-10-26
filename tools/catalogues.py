@@ -9,6 +9,9 @@ Comandos:
     python3 tools/catalogues.py pending          # cadastros com catálogo e sem resumo
     python3 tools/catalogues.py download IB-XXX  # baixa para catalogues/IB-XXX/
     python3 tools/catalogues.py save IB-XXX resumo.json
+    python3 tools/catalogues.py render IB-XXX    # PDFs -> páginas em JPG + texto (para ler)
+    python3 tools/catalogues.py queue            # pedidos do botão "Processar com IA" do /admin
+    python3 tools/catalogues.py job IB-XXX processing|error ["mensagem"]
 """
 import datetime
 import json
@@ -18,6 +21,7 @@ import ssl
 import sys
 import urllib.error
 import urllib.parse
+import subprocess
 import urllib.request
 import zipfile
 from xml.etree import ElementTree
@@ -170,14 +174,61 @@ def cmd_download(ref):
         print("link do catálogo: " + s["catalogue_link"])
 
 
+def utcnow():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
+def set_job(ref, status, error=None):
+    body = {"status": status, "error": error}
+    if status == "processing":
+        body["started_at"] = utcnow()
+    else:
+        body["finished_at"] = utcnow()
+    call("PATCH", "/rest/v1/catalogue_jobs?reference=eq." + urllib.parse.quote(ref), body,
+         {"Prefer": "return=minimal"})
+
+
+def cmd_queue():
+    # "processing" há mais de 2 h = execução anterior travou; volta para a fila
+    rows = call("GET", "/rest/v1/catalogue_jobs?select=reference,status,requested_at,started_at"
+                       "&status=in.(queued,processing)&order=requested_at")
+    limit = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=2)
+    todo = [r["reference"] for r in rows if r["status"] == "queued" or
+            (r["started_at"] and datetime.datetime.fromisoformat(r["started_at"]) < limit)]
+    print("\n".join(todo) if todo else "Fila vazia.")
+
+
+def cmd_job(ref, status, error=None):
+    if status not in ("processing", "error"):
+        sys.exit("status deve ser processing ou error")
+    set_job(ref, status, error)
+    print("%s: %s" % (ref, status))
+
+
+def cmd_render(ref):
+    folder = os.path.join(OUT, ref)
+    pdfs = [f for f in sorted(os.listdir(folder)) if f.lower().endswith(".pdf")] if os.path.isdir(folder) else []
+    if not pdfs:
+        print("Nenhum PDF em " + os.path.relpath(folder, ROOT) + " (rode download antes).")
+    for f in pdfs:
+        dest = os.path.join(folder, "pages-" + f[:-4])
+        os.makedirs(dest, exist_ok=True)
+        out = subprocess.run(["osascript", "-l", "JavaScript", os.path.join(ROOT, "tools", "pdf2png.js"),
+                              os.path.join(folder, f), dest, "1000"], capture_output=True, text=True)
+        if out.returncode:
+            sys.exit("Erro ao converter %s: %s" % (f, out.stderr.strip()))
+        print("%s: %s -> %s (páginas pNNN.jpg + text.txt)" % (f, out.stdout.strip(), os.path.relpath(dest, ROOT)))
+
+
 def cmd_save(ref, path):
     s = supplier(ref)
     summary = json.load(open(path, encoding="utf-8"))
     row = {"supplier_id": s["id"], "reference": ref, "summary": summary,
            "source_files": summary.get("source_files") or [], "generated_by": summary.get("generated_by"),
-           "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+           "updated_at": utcnow()}
     call("POST", "/rest/v1/catalogue_summaries?on_conflict=supplier_id", [row],
          {"Prefer": "resolution=merge-duplicates,return=minimal"})
+    set_job(ref, "done")  # se veio do botão do /admin; sem pedido na fila, não muda nada
     print("resumo salvo: " + ref)
 
 
@@ -190,5 +241,11 @@ if __name__ == "__main__":
         cmd_download(a[1])
     elif a[:1] == ["save"] and len(a) == 3:
         cmd_save(a[1], a[2])
+    elif a[:1] == ["render"] and len(a) == 2:
+        cmd_render(a[1])
+    elif a[:1] == ["queue"]:
+        cmd_queue()
+    elif a[:1] == ["job"] and len(a) in (3, 4):
+        cmd_job(a[1], a[2], a[3] if len(a) == 4 else None)
     else:
         sys.exit(__doc__)
