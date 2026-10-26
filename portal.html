@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<!--
+  Portal do fornecedor – India Brazil (/portal)
+  Login: e-mail do cadastro + senha + código do app autenticador (2FA obrigatório).
+  Os dados só chegam com 2FA concluído: as regras ficam no banco (docs/portal-setup.sql).
+-->
+<html lang="en-IN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Supplier portal | India Brazil</title>
+<link rel="icon" href="/assets/logo/india-brazil-icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --navy:#0F1A3D; --green:#0B7A55; --green-2:#00C853; --orange:#FF9100;
+  --ink:#151A2D; --muted:#5A6178; --line:#DCE0E8; --page:#F5F7FA; --surface:#FFFFFF; --field:#FFFFFF;
+  --chip:#EEF1F6; --error:#B42318; --focus:#2F6FED; --mine:#E7F4EE;
+  color-scheme:light; box-sizing:border-box;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ink:#ECEEF5; --muted:#A8AFC4; --line:#2B3250; --page:#0C1124; --surface:#151B33; --field:#1B2240; --chip:#232B4A;
+  --green:#2FB283; --error:#FF8A80; --focus:#7FA6FF; --mine:#173A31; color-scheme:dark;}}
+:root[data-theme="dark"]{--ink:#ECEEF5; --muted:#A8AFC4; --line:#2B3250; --page:#0C1124; --surface:#151B33; --field:#1B2240; --chip:#232B4A;
+  --green:#2FB283; --error:#FF8A80; --focus:#7FA6FF; --mine:#173A31; color-scheme:dark;}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;min-height:100vh;background:var(--page);color:var(--ink);font-family:"IBM Plex Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;font-size:15px}
+h1,h2,h3{line-height:1.2;margin:0 0 .5em;letter-spacing:-.01em}
+a{color:var(--green)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:4px}
+[hidden]{display:none!important}
+
+header{background:var(--navy);color:#fff}
+header .in{max-width:1180px;margin:0 auto;padding:0 16px;height:60px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+header img{height:34px;width:auto;display:block}
+header .who{display:flex;align-items:center;gap:.8rem;font-size:.9rem;color:#C9D0E6;min-width:0}
+header .who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+main{max-width:1180px;margin:0 auto;padding:24px 16px 64px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}
+.btn{font:inherit;font-weight:600;border-radius:8px;padding:.6rem 1.1rem;border:1.5px solid transparent;cursor:pointer;background:var(--green);color:#fff;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:.4rem;white-space:nowrap}
+.btn:hover{filter:brightness(1.08)}
+.btn[disabled]{opacity:.55;cursor:default;filter:none}
+.btn-ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+header .btn-ghost{color:#fff;border-color:rgba(255,255,255,.3);padding:.35rem .8rem}
+.btn-sm{padding:.3rem .7rem;font-size:.85rem}
+.link{background:none;border:0;padding:0;font:inherit;color:var(--green);cursor:pointer;text-decoration:underline}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:8px;padding:.6rem .75rem;width:100%}
+textarea{resize:vertical;min-height:5rem}
+input:focus,select:focus,textarea:focus{border-color:var(--focus);outline:none;box-shadow:0 0 0 3px rgba(47,111,237,.18)}
+label{display:block;font-weight:500;margin-bottom:.3rem}
+.field{margin-bottom:1rem}
+.hint{font-size:.85rem;color:var(--muted);margin:.3rem 0 0}
+.muted{color:var(--muted)}
+.err{color:var(--error);font-size:.9rem;margin:.6rem 0 0}
+.ok{color:var(--green);font-size:.9rem;margin:.6rem 0 0}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em}
+
+/* Telas de acesso */
+.auth{max-width:420px;margin:6vh auto 0}
+.auth .btn{width:100%;margin-top:.3rem}
+.auth .alt{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-top:1rem;font-size:.92rem}
+.qr{display:flex;justify-content:center;margin:1rem 0;padding:12px;background:#fff;border-radius:10px;border:1px solid var(--line)}
+.qr img{width:200px;height:200px}
+.code{letter-spacing:.4em;font-size:1.4rem;text-align:center;font-family:ui-monospace,Menlo,Consolas,monospace}
+.secret{word-break:break-all;background:var(--chip);border-radius:8px;padding:.5rem .7rem;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem}
+ol.steps{padding-left:1.2rem;margin:.4rem 0 1rem}
+ol.steps li{margin-bottom:.35rem}
+
+/* Painel */
+.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:1rem;margin-bottom:16px}
+.top h1{font-size:1.5rem;margin:0}
+nav.tabs{display:flex;gap:.3rem;overflow-x:auto;border-bottom:1px solid var(--line);margin-bottom:18px}
+nav.tabs button{font:inherit;font-weight:600;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:.6rem .9rem;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--orange)}
+nav.tabs .badge{display:inline-block;min-width:1.3rem;padding:0 .35rem;margin-left:.3rem;border-radius:99px;background:var(--orange);color:#0F1A3D;font-size:.75rem;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:16px}
+dl{display:grid;grid-template-columns:max-content 1fr;gap:.35rem 1rem;margin:0}
+dt{color:var(--muted)}
+dd{margin:0;overflow-wrap:anywhere}
+.pill{display:inline-block;font-size:.78rem;font-weight:600;padding:.12rem .55rem;border-radius:99px;background:var(--chip);color:var(--muted);white-space:nowrap}
+.pill.good{background:rgba(11,122,85,.12);color:var(--green)}
+.pill.warn{background:rgba(255,145,0,.15);color:#B45F00}
+.pill.bad{background:rgba(180,35,24,.12);color:var(--error)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pill.warn{color:var(--orange)}}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:12px 0}
+.tile{background:var(--chip);border-radius:10px;padding:12px 14px}
+.tile b{display:block;font-size:1.4rem;line-height:1.15}
+.tile span{font-size:.82rem;color:var(--muted)}
+.timeline{list-style:none;margin:0;padding:0}
+.timeline li{display:flex;gap:.7rem;align-items:flex-start;padding:.45rem 0}
+.timeline .dot{flex:none;width:1.4rem;height:1.4rem;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:.75rem;margin-top:.1rem}
+.timeline .done .dot{background:var(--green);border-color:var(--green);color:#fff}
+.timeline .now .dot{border-color:var(--orange)}
+.files{list-style:none;margin:0;padding:0}
+.files li{display:flex;justify-content:space-between;align-items:center;gap:.6rem;padding:.5rem 0;border-bottom:1px solid var(--line)}
+.files li:last-child{border-bottom:0}
+.files span{overflow-wrap:anywhere}
+ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
+.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
+.tbl th,.tbl td{text-align:left;padding:.6rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+.tbl tr.row{cursor:pointer}
+.tbl tr.row:hover{background:var(--chip)}
+.scroll{overflow-x:auto}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.form2{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0 14px}
+.form2 .full{grid-column:1/-1}
+
+/* Chat */
+.chat{display:flex;flex-direction:column;height:480px}
+.msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:.6rem;padding:4px 2px 10px}
+.msg{max-width:80%;padding:.55rem .8rem;border-radius:12px;background:var(--chip);overflow-wrap:anywhere;white-space:pre-wrap}
+.msg.mine{align-self:flex-end;background:var(--mine)}
+.msg .who{display:block;font-size:.75rem;color:var(--muted);margin-bottom:.15rem;white-space:normal}
+.send{display:flex;gap:.5rem;border-top:1px solid var(--line);padding-top:10px}
+.send textarea{min-height:2.8rem;height:2.8rem}
+</style>
+</head>
+<body>
+<header><div class="in">
+  <a href="/"><img src="/assets/logo/india-brazil-logo-white.svg" alt="India Brazil"></a>
+  <div class="who" id="who" hidden><span id="whoEmail"></span><button class="btn btn-ghost btn-sm" id="logout" type="button">Sign out</button></div>
+</div></header>
+
+<main>
+  <!-- Entrar -->
+  <form class="card auth" id="vSignin" hidden>
+    <h1>Supplier portal</h1>
+    <p class="muted">Sign in to follow your registration, catalogues and buyer enquiries.</p>
+    <div class="field"><label for="siEmail">Email</label><input id="siEmail" type="email" autocomplete="username" required></div>
+    <div class="field"><label for="siPass">Password</label><input id="siPass" type="password" autocomplete="current-password" required></div>
+    <button class="btn" type="submit">Sign in</button>
+    <p class="err" role="alert"></p>
+    <div class="alt"><button class="link" type="button" data-go="vSignup">Create your account</button><button class="link" type="button" data-go="vForgot">Forgot password?</button></div>
+  </form>
+
+  <!-- Criar conta -->
+  <form class="card auth" id="vSignup" hidden>
+    <h1>Create your account</h1>
+    <p class="muted">Use the <b>same email</b> you gave when registering your company. Not registered yet? <a href="/register">Register your company</a> first.</p>
+    <div class="field"><label for="suEmail">Email</label><input id="suEmail" type="email" autocomplete="username" required></div>
+    <div class="field"><label for="suPass">Password</label><input id="suPass" type="password" autocomplete="new-password" minlength="10" required><p class="hint">At least 10 characters.</p></div>
+    <div class="field"><label for="suPass2">Confirm password</label><input id="suPass2" type="password" autocomplete="new-password" required></div>
+    <button class="btn" type="submit">Create account</button>
+    <p class="err" role="alert"></p><p class="ok" role="status"></p>
+    <div class="alt"><button class="link" type="button" data-go="vSignin">I already have an account</button></div>
+  </form>
+
+  <!-- Esqueci a senha -->
+  <form class="card auth" id="vForgot" hidden>
+    <h1>Reset your password</h1>
+    <p class="muted">We will email you a link to choose a new password.</p>
+    <div class="field"><label for="fgEmail">Email</label><input id="fgEmail" type="email" autocomplete="username" required></div>
+    <button class="btn" type="submit">Send reset link</button>
+    <p class="err" role="alert"></p><p class="ok" role="status"></p>
+    <div class="alt"><button class="link" type="button" data-go="vSignin">Back to sign in</button></div>
+  </form>
+
+  <!-- Ativar 2FA (obrigatório no primeiro acesso) -->
+  <form class="card auth" id="vEnroll" hidden>
+    <h1>Protect your account</h1>
+    <p class="muted">Two-step verification is required. You will need a code from your phone each time you sign in.</p>
+    <ol class="steps">
+      <li>Install an authenticator app: Google Authenticator, Microsoft Authenticator or Authy.</li>
+      <li>In the app, tap <b>+</b> and scan this QR code.</li>
+      <li>Type the 6-digit code shown in the app.</li>
+    </ol>
+    <div class="qr"><img id="qr" alt="QR code for your authenticator app"></div>
+    <p class="hint">Cannot scan? Enter this key in the app instead:</p>
+    <p class="secret" id="secret"></p>
+    <div class="field"><label for="enCode">6-digit code</label><input id="enCode" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>
+    <button class="btn" type="submit">Turn on two-step verification</button>
+    <p class="err" role="alert"></p>
+  </form>
+
+  <!-- Código 2FA no login -->
+  <form class="card auth" id="vChallenge" hidden>
+    <h1>Two-step verification</h1>
+    <p class="muted">Open your authenticator app and type the 6-digit code for <b>India Brazil</b>.</p>
+    <div class="field"><label for="chCode">6-digit code</label><input id="chCode" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>
+    <button class="btn" type="submit">Verify</button>
+    <p class="err" role="alert"></p>
+    <p class="hint">Lost your phone? Contact us on WhatsApp and we will reset your verification after confirming your identity.</p>
+  </form>
+
+  <!-- Nova senha (link do e-mail) -->
+  <form class="card auth" id="vNewpass" hidden>
+    <h1>Choose a new password</h1>
+    <div class="field"><label for="npPass">New password</label><input id="npPass" type="password" autocomplete="new-password" minlength="10" required><p class="hint">At least 10 characters.</p></div>
+    <div class="field"><label for="npPass2">Confirm new password</label><input id="npPass2" type="password" autocomplete="new-password" required></div>
+    <button class="btn" type="submit">Save new password</button>
+    <p class="err" role="alert"></p>
+  </form>
+
+  <!-- Painel -->
+  <section id="vApp" hidden>
+    <div class="top">
+      <div><div class="muted" id="appRef"></div><h1 id="appName"></h1></div>
+      <select id="pick" aria-label="Choose company" hidden></select>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="overview">Overview</button>
+      <button type="button" role="tab" data-tab="profile">Company profile</button>
+      <button type="button" role="tab" data-tab="catalogues">Catalogues</button>
+      <button type="button" role="tab" data-tab="enquiries">Enquiries<span class="badge" id="openCount" hidden></span></button>
+      <button type="button" role="tab" data-tab="security">Security</button>
+    </nav>
+    <div id="pane"></div>
+  </section>
+
+  <div class="card auth empty" id="vNone" hidden></div>
+  <p class="err" id="appErr" role="alert"></p>
+</main>
+
+<script>
+(function(){
+  var SUPABASE_URL="https://fwlgkmtttaelntnibifd.supabase.co";
+  var SUPABASE_ANON_KEY="sb_publishable_rOCe8m9bS5WTyUhS59fsQA_FEoMGE4C"; // publishable: só funciona com as regras do banco
+  var BUCKET="catalogues", PORTAL=location.origin+"/portal";
+  var REG={new:["Received","warn"],in_review:["Under review","warn"],verified:["Verified","good"],published:["Live on marketplace","good"],rejected:["Not approved","bad"]};
+  var RFQ={open:["New enquiry","warn"],quoted:["Quote sent","good"],negotiating:["In negotiation","warn"],won:["Order confirmed","good"],lost:["Not selected","bad"],closed:["Closed",""]};
+  var CUR=["USD","INR","EUR","BRL"], INCO=["FOB","CIF","CFR","EXW","FCA","DAP","DDP"];
+
+  // Sessão guardada separada da do /admin: entrar no portal não derruba o login de administrador
+  var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{storageKey:"ib-portal-auth"}});
+  var $=function(id){return document.getElementById(id);};
+  var VIEWS=["vSignin","vSignup","vForgot","vEnroll","vChallenge","vNewpass","vApp","vNone"];
+  var recovering=/type=recovery/.test(location.hash), me=null, suppliers=[], sup=null, tab="overview", chan=null, enrollId=null;
+
+  // Monta elementos sem innerHTML (dados vêm de usuários)
+  function h(tag,attrs,kids){
+    var e=document.createElement(tag);
+    Object.keys(attrs||{}).forEach(function(k){
+      if(k==="class")e.className=attrs[k];else if(k.slice(0,2)==="on")e.addEventListener(k.slice(2),attrs[k]);else if(attrs[k]!=null&&attrs[k]!==false)e.setAttribute(k,attrs[k]===true?"":attrs[k]);
+    });
+    [].concat(kids==null?[]:kids).forEach(function(c){if(c==null||c===false)return;e.appendChild(typeof c==="object"?c:document.createTextNode(String(c)));});
+    return e;
+  }
+  function txt(v){return v==null||v===""||(Array.isArray(v)&&!v.length)?"–":Array.isArray(v)?v.join(", "):String(v);}
+  // Datas sem hora (2026-11-01) são lidas no fuso local, senão aparecem um dia antes
+  function date(v){if(/^\d{4}-\d{2}-\d{2}$/.test(v||""))v+="T00:00:00";return v?new Date(v).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}):"–";}
+  function when(v){return new Date(v).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});}
+  function pill(map,k){var p=map[k]||[k,""];return h("span",{class:"pill "+p[1]},p[0]);}
+  function dl(pairs){return h("dl",null,pairs.reduce(function(a,p){a.push(h("dt",null,p[0]),h("dd",null,p[1]&&p[1].nodeType?p[1]:txt(p[1])));return a;},[]));}
+  function one(v){return Array.isArray(v)?v[0]||null:v||null;}
+  function fail(e){console.error(e);$("appErr").textContent="Something went wrong: "+((e&&e.message)||e);}
+  function show(id){
+    VIEWS.forEach(function(v){$(v).hidden=v!==id;});
+    $("appErr").textContent="";
+    var f=$(id).querySelector("input");if(f&&id!=="vApp")setTimeout(function(){f.focus();},0);
+  }
+  function msg(form,err,ok){form.querySelector(".err").textContent=err||"";var o=form.querySelector(".ok");if(o)o.textContent=ok||"";}
+  function busy(form,on){Array.prototype.forEach.call(form.querySelectorAll("button"),function(b){b.disabled=on;});}
+  function strong(p){return p.length>=10;}
+
+  document.querySelectorAll("[data-go]").forEach(function(b){b.addEventListener("click",function(){show(b.dataset.go);});});
+
+  // --- Acesso ---
+  $("vSignin").addEventListener("submit",async function(ev){
+    ev.preventDefault();var f=this;msg(f);busy(f,true);
+    var r=await sb.auth.signInWithPassword({email:$("siEmail").value.trim(),password:$("siPass").value});
+    busy(f,false);
+    if(r.error){msg(f,r.error.code==="email_not_confirmed"?"Please confirm your email first: open the link we sent you.":r.error.code==="invalid_credentials"?"Incorrect email or password.":r.error.message);return;}
+    $("siPass").value="";route();
+  });
+
+  $("vSignup").addEventListener("submit",async function(ev){
+    ev.preventDefault();var f=this;msg(f);
+    if(!strong($("suPass").value))return msg(f,"Password must have at least 10 characters.");
+    if($("suPass").value!==$("suPass2").value)return msg(f,"Passwords do not match.");
+    busy(f,true);
+    var r=await sb.auth.signUp({email:$("suEmail").value.trim().toLowerCase(),password:$("suPass").value,options:{emailRedirectTo:PORTAL}});
+    busy(f,false);
+    if(r.error)return msg(f,r.error.code==="weak_password"?"Please choose a stronger password.":r.error.message);
+    $("suPass").value=$("suPass2").value="";
+    msg(f,"","Almost done! We sent a confirmation link to your email. Open it to activate your account, then sign in.");
+  });
+
+  $("vForgot").addEventListener("submit",async function(ev){
+    ev.preventDefault();var f=this;msg(f);busy(f,true);
+    var r=await sb.auth.resetPasswordForEmail($("fgEmail").value.trim(),{redirectTo:PORTAL});
+    busy(f,false);
+    if(r.error)return msg(f,r.error.message);
+    msg(f,"","If an account exists for this email, a reset link is on its way. Check your inbox and spam folder.");
+  });
+
+  $("vEnroll").addEventListener("submit",async function(ev){
+    ev.preventDefault();var f=this;msg(f);busy(f,true);
+    var r=await sb.auth.mfa.challengeAndVerify({factorId:enrollId,code:$("enCode").value.trim()});
+    busy(f,false);
+    if(r.error)return msg(f,"That code did not work. Check the time on your phone and try the newest code.");
+    $("enCode").value="";route();
+  });
+
+  $("vChallenge").addEventListener("submit",async function(ev){
+    ev.preventDefault();var f=this;msg(f);busy(f,true);
+    var fs=(await sb.auth.mfa.listFactors()).data;
+    var r=await sb.auth.mfa.challengeAndVerify({factorId:fs.totp[0].id,code:$("chCode").value.trim()});
+    busy(f,false);
+    if(r.error)return msg(f,"That code did not work. Try the newest code in your app.");
+    $("chCode").value="";route();
+  });
+
+  $("vNewpass").addEventListener("submit",async function(ev){
+    ev.preventDefault();var f=this;msg(f);
+    if(!strong($("npPass").value))return msg(f,"Password must have at least 10 characters.");
+    if($("npPass").value!==$("npPass2").value)return msg(f,"Passwords do not match.");
+    busy(f,true);
+    var r=await sb.auth.updateUser({password:$("npPass").value});
+    busy(f,false);
+    if(r.error)return msg(f,r.error.message);
+    $("npPass").value=$("npPass2").value="";recovering=false;history.replaceState(null,"",location.pathname);route();
+  });
+
+  $("logout").addEventListener("click",async function(){stopChat();await sb.auth.signOut();me=null;route();});
+  sb.auth.onAuthStateChange(function(ev){if(ev==="PASSWORD_RECOVERY"){recovering=true;setTimeout(route,0);}});
+
+  // Decide qual tela mostrar: login → 2FA (cadastrar ou digitar código) → nova senha → painel
+  async function route(){
+    var s=(await sb.auth.getSession()).data.session;
+    if(!s){$("who").hidden=true;show(recovering?"vForgot":"vSignin");return;}
+    $("whoEmail").textContent=s.user.email;$("who").hidden=false;
+    var fs=(await sb.auth.mfa.listFactors()).data||{all:[],totp:[]};
+    if(!fs.totp.length)return enroll(fs);
+    var aal=(await sb.auth.mfa.getAuthenticatorAssuranceLevel()).data;
+    if(aal.currentLevel!=="aal2")return show("vChallenge");
+    if(recovering)return show("vNewpass");
+    loadApp(s.user).catch(fail);
+  }
+
+  async function enroll(fs){
+    // Apaga tentativas antigas não concluídas antes de gerar um QR novo
+    for(var i=0;i<fs.all.length;i++)if(fs.all[i].status!=="verified")await sb.auth.mfa.unenroll({factorId:fs.all[i].id});
+    var r=await sb.auth.mfa.enroll({factorType:"totp",friendlyName:"India Brazil "+new Date().toISOString().slice(0,10)});
+    if(r.error)return fail(r.error);
+    enrollId=r.data.id;$("qr").src=r.data.totp.qr_code;$("secret").textContent=r.data.totp.secret;
+    show("vEnroll");
+  }
+
+  // --- Painel ---
+  async function loadApp(user){
+    me=user;
+    var r=await sb.from("suppliers").select("*").order("created_at",{ascending:false});
+    if(r.error)return fail(r.error);
+    suppliers=r.data;
+    if(!suppliers.length){
+      var n=$("vNone");n.textContent="";
+      n.appendChild(h("h2",null,"No registration found"));
+      n.appendChild(h("p",null,["We could not find a company registered with ",h("b",null,user.email),"."]));
+      n.appendChild(h("p",{class:"muted"},"Please register your company using this same email, or contact us on WhatsApp if you registered with a different one."));
+      n.appendChild(h("a",{class:"btn",href:"/register"},"Register your company"));
+      return show("vNone");
+    }
+    var p=$("pick");p.textContent="";
+    suppliers.forEach(function(s,i){p.appendChild(h("option",{value:i},s.company_name+" ("+s.reference+")"));});
+    p.hidden=suppliers.length<2;
+    pickSupplier(0);
+    show("vApp");
+  }
+  $("pick").addEventListener("change",function(){pickSupplier(+this.value);});
+  async function pickSupplier(i){
+    sup=suppliers[i];
+    $("appName").textContent=sup.company_name;$("appRef").textContent="Reference "+sup.reference;
+    await countOpen();
+    openTab(tab);
+  }
+  // Número de pedidos novos (sem cotação) ao lado da aba Enquiries
+  async function countOpen(){
+    var c=await sb.from("rfqs").select("id",{count:"exact",head:true}).eq("supplier_id",sup.id).eq("status","open");
+    $("openCount").textContent=c.count||"";$("openCount").hidden=!c.count;
+  }
+  document.querySelectorAll("nav.tabs button").forEach(function(b){b.addEventListener("click",function(){openTab(b.dataset.tab);});});
+  function openTab(t,arg){
+    tab=t;stopChat();
+    document.querySelectorAll("nav.tabs button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.tab===t);});
+    var p=$("pane");p.textContent="";$("appErr").textContent="";
+    ({overview:overview,profile:profile,catalogues:catalogues,enquiries:enquiries,security:security})[t](p,arg).catch(fail);
+  }
+
+  async function catalogueState(){
+    var m=await sb.from("catalogue_summaries").select("summary,updated_at").eq("supplier_id",sup.id).maybeSingle();
+    var j=await sb.from("catalogue_jobs").select("status").eq("supplier_id",sup.id).maybeSingle();
+    if(m.error)throw m.error;if(j.error)throw j.error;
+    return {summary:m.data,job:j.data};
+  }
+
+  async function overview(p){
+    var cs=await catalogueState();
+    var hasCat=(sup.catalogue_files||[]).length||sup.catalogue_link;
+    var steps=[
+      ["Registration received",true,date(sup.created_at)],
+      ["Catalogue received",!!hasCat,hasCat?"":"Send us your catalogue on WhatsApp"],
+      ["Catalogue processed by our team",!!cs.summary,cs.summary?date(cs.summary.updated_at):""],
+      ["Company verified",["verified","published"].indexOf(sup.status)>-1,""],
+      ["Live on the India Brazil marketplace",sup.status==="published",""]
+    ];
+    var firstOpen=steps.findIndex(function(s){return !s[1];});
+    p.appendChild(h("div",{class:"grid"},[
+      h("div",{class:"card"},[h("h3",null,"Registration status"),h("p",null,pill(REG,sup.status)),
+        h("ul",{class:"timeline"},steps.map(function(s,i){
+          return h("li",{class:s[1]?"done":i===firstOpen?"now":""},[h("span",{class:"dot","aria-hidden":"true"},s[1]?"✓":""),h("div",null,[h("div",null,s[0]),s[2]?h("div",{class:"muted",style:"font-size:.85rem"},s[2]):null])]);
+        }))]),
+      h("div",{class:"card"},[h("h3",null,"Buyer enquiries"),h("p",{class:"muted"},"Brazilian buyers interested in your products will appear in Enquiries, where you can send quotations and chat with them."),
+        h("button",{class:"btn",type:"button",onclick:function(){openTab("enquiries");}},"Open enquiries")])
+    ]));
+  }
+
+  async function profile(p){
+    var s=sup;
+    p.appendChild(h("div",{class:"grid"},[
+      h("div",{class:"card"},[h("h3",null,"Company"),dl([["Company",s.company_name],["Business type",s.business_type],["City / State",[s.city,s.state].filter(Boolean).join(", ")],["IEC",s.iec],["GSTIN",s.gstin],["Year established",s.year_established],["Website",s.website],["Export turnover",s.export_turnover],["Latin America experience",s.latam_experience]])]),
+      h("div",{class:"card"},[h("h3",null,"Contact"),dl([["Name",[s.contact_salutation,s.contact_name].filter(Boolean).join(" ")],["Designation",s.designation],["Email",s.email],["Mobile",s.mobile+(s.whatsapp?" (WhatsApp)":"")]])]),
+      h("div",{class:"card"},[h("h3",null,"Products"),dl([["Categories",s.categories],["Main products",s.main_products],["Certifications",s.certifications]])])
+    ]));
+    p.appendChild(h("p",{class:"muted"},"Need to change something? Write to us on WhatsApp with your reference "+s.reference+" and our team will update it."));
+  }
+
+  async function catalogues(p){
+    var cs=await catalogueState(), s=sup;
+    var files=h("ul",{class:"files"});
+    (s.catalogue_files||[]).forEach(function(path){
+      var name=path.split("/").pop();
+      files.appendChild(h("li",null,[h("span",null,name),h("button",{class:"btn btn-sm btn-ghost",type:"button",onclick:async function(){
+        var u=await sb.storage.from(BUCKET).createSignedUrl(path,300,{download:name});
+        if(u.error)return fail(u.error);location.href=u.data.signedUrl;
+      }},"Download")]));
+    });
+    if(s.catalogue_link)files.appendChild(h("li",null,[h("span",null,s.catalogue_link),h("a",{class:"btn btn-sm btn-ghost",href:s.catalogue_link,target:"_blank",rel:"noopener noreferrer"},"Open link")]));
+    if(!files.children.length)files.appendChild(h("li",{class:"muted"},"No catalogue received yet. Send it to us on WhatsApp with your reference "+s.reference+"."));
+
+    var st=cs.summary?["Processed","good"]:cs.job&&(cs.job.status==="queued"||cs.job.status==="processing")?["Being processed","warn"]:["Awaiting review","warn"];
+    var box=h("div",{class:"card"},[h("h3",null,"Processing by our team"),h("p",null,h("span",{class:"pill "+st[1]},st[0]))]);
+    if(cs.summary){
+      var x=cs.summary.summary||{},t=x.totals||{};
+      box.appendChild(h("div",{class:"tiles"},[
+        h("div",{class:"tile"},[h("b",null,String(t.products!=null?t.products:(x.products||[]).length)),h("span",null,"products identified")]),
+        h("div",{class:"tile"},[h("b",null,String(t.variants!=null?t.variants:"–")),h("span",null,"variants")]),
+        h("div",{class:"tile"},[h("b",null,String(t.with_price!=null?t.with_price:"–")),h("span",null,"with price")])
+      ]));
+      if(x.missing_info&&x.missing_info.length){
+        box.appendChild(h("h3",{style:"margin-top:1rem"},"Information we still need from you"));
+        box.appendChild(h("p",{class:"muted"},"Sending these details helps buyers choose you. (Listed in Portuguese by our team; reply on WhatsApp in English.)"));
+        box.appendChild(h("ul",{class:"plain"},x.missing_info.map(function(i){return h("li",null,i);})));
+      }
+    }else{
+      box.appendChild(h("p",{class:"muted"},"Our team reads every catalogue and organises your products for Brazilian buyers. You will see the result here."));
+    }
+    p.appendChild(h("div",{class:"grid"},[h("div",{class:"card"},[h("h3",null,"Catalogues you sent"),files]),box]));
+  }
+
+  // --- Orçamentos (RFQs) ---
+  async function enquiries(p,id){
+    if(id)return enquiry(p,id);
+    var r=await sb.from("rfqs").select("id,code,created_at,product,buyer_label,quantity,unit,status,needed_by").eq("supplier_id",sup.id).order("created_at",{ascending:false});
+    if(r.error)throw r.error;
+    if(!r.data.length){p.appendChild(h("div",{class:"card empty"},[h("p",null,"No enquiries yet."),h("p",{class:"muted"},"When a Brazilian buyer asks about your products, the enquiry will appear here and we will alert you on WhatsApp.")]));return;}
+    p.appendChild(h("div",{class:"card scroll",style:"padding:0"},h("table",{class:"tbl"},[
+      h("thead",null,h("tr",null,["Date","Enquiry","Product","Buyer","Quantity","Status"].map(function(c){return h("th",null,c);}))),
+      h("tbody",null,r.data.map(function(q){
+        var go=function(){openTab("enquiries",q.id);};
+        return h("tr",{class:"row",tabindex:"0",onclick:go,onkeydown:function(e){if(e.key==="Enter")go();}},[
+          h("td",null,date(q.created_at)),h("td",{class:"mono"},q.code),h("td",null,h("b",null,q.product)),h("td",null,q.buyer_label),
+          h("td",null,q.quantity!=null?q.quantity+" "+(q.unit||""):"–"),h("td",null,pill(RFQ,q.status))]);
+      }))
+    ])));
+  }
+
+  async function enquiry(p,id){
+    var r=await sb.from("rfqs").select("*").eq("id",id).maybeSingle();
+    if(r.error)throw r.error;
+    if(!r.data){p.appendChild(h("p",{class:"empty"},"Enquiry not found."));return;}
+    var q=r.data;
+    var qs=await sb.from("rfq_quotes").select("*").eq("rfq_id",q.id).order("created_at",{ascending:false});
+    if(qs.error)throw qs.error;
+
+    p.appendChild(h("button",{class:"btn btn-ghost btn-sm",type:"button",style:"margin-bottom:14px",onclick:function(){openTab("enquiries");}},"← All enquiries"));
+    p.appendChild(h("div",{class:"top"},[h("div",null,[h("div",{class:"muted mono"},q.code),h("h1",{style:"font-size:1.3rem"},q.product)]),pill(RFQ,q.status)]));
+
+    var left=h("div",null,[
+      h("div",{class:"card",style:"margin-bottom:16px"},[h("h3",null,"Request"),dl([
+        ["Buyer",q.buyer_label],["Quantity",q.quantity!=null?q.quantity+" "+(q.unit||""):null],
+        ["Target price",q.target_price!=null?q.target_price+" "+(q.currency||""):null],["Incoterm",q.incoterm],
+        ["Destination",q.destination],["Needed by",q.needed_by?date(q.needed_by):null],["Received",date(q.created_at)]]),
+        q.details?h("p",{style:"margin:1rem 0 0;white-space:pre-wrap"},q.details):null]),
+      quotesCard(q,qs.data)
+    ]);
+    var right=h("div",{class:"card"},[h("h3",null,"Chat with the buyer"),chatBox(q)]);
+    p.appendChild(h("div",{class:"grid"},[left,right]));
+  }
+
+  function quotesCard(q,list){
+    var card=h("div",{class:"card"},h("h3",null,"Your quotations"));
+    if(list.length){
+      card.appendChild(h("div",{class:"scroll"},h("table",{class:"tbl"},[
+        h("thead",null,h("tr",null,["Sent","Unit price","MOQ","Lead time","Incoterm","Valid until"].map(function(c){return h("th",null,c);}))),
+        h("tbody",null,list.map(function(x){return h("tr",null,[h("td",null,date(x.created_at)),h("td",null,h("b",null,x.unit_price+" "+x.currency)),h("td",null,txt(x.moq)),
+          h("td",null,x.lead_time_days!=null?x.lead_time_days+" days":"–"),h("td",null,txt(x.incoterm)),h("td",null,x.valid_until?date(x.valid_until):"–")]);}))
+      ])));
+    }
+    if(["open","quoted","negotiating"].indexOf(q.status)<0){if(!list.length)card.appendChild(h("p",{class:"muted"},"This enquiry is closed."));return card;}
+
+    function sel(id,opts,val){var s=h("select",{id:id});opts.forEach(function(o){s.appendChild(h("option",{value:o},o));});s.value=val;return s;}
+    var f=h("form",{class:"form2",style:"margin-top:1rem"},[
+      h("div",{class:"field"},[h("label",{for:"qPrice"},"Unit price *"),h("input",{id:"qPrice",type:"number",min:"0.0001",step:"any",required:true,inputmode:"decimal"})]),
+      h("div",{class:"field"},[h("label",{for:"qCur"},"Currency"),sel("qCur",CUR,q.currency&&CUR.indexOf(q.currency)>-1?q.currency:"USD")]),
+      h("div",{class:"field"},[h("label",{for:"qMoq"},"Minimum order (MOQ)"),h("input",{id:"qMoq",placeholder:"e.g. 500 pcs"})]),
+      h("div",{class:"field"},[h("label",{for:"qLead"},"Lead time (days)"),h("input",{id:"qLead",type:"number",min:"0",max:"730",inputmode:"numeric"})]),
+      h("div",{class:"field"},[h("label",{for:"qInco"},"Incoterm"),sel("qInco",INCO,q.incoterm&&INCO.indexOf(q.incoterm)>-1?q.incoterm:"FOB")]),
+      h("div",{class:"field"},[h("label",{for:"qValid"},"Valid until"),h("input",{id:"qValid",type:"date"})]),
+      h("div",{class:"field full"},[h("label",{for:"qNotes"},"Notes"),h("textarea",{id:"qNotes",maxlength:"4000",placeholder:"Payment terms, packaging, samples, certifications…"})]),
+      h("div",{class:"full"},[h("button",{class:"btn",type:"submit"},list.length?"Send updated quotation":"Send quotation"),h("p",{class:"err",role:"alert"})])
+    ]);
+    f.addEventListener("submit",async function(ev){
+      ev.preventDefault();busy(f,true);f.querySelector(".err").textContent="";
+      var v=function(id){return f.querySelector("#"+id).value.trim();};
+      var r=await sb.from("rfq_quotes").insert({rfq_id:q.id,supplier_id:sup.id,unit_price:+v("qPrice"),currency:v("qCur"),moq:v("qMoq")||null,
+        lead_time_days:v("qLead")?parseInt(v("qLead"),10):null,incoterm:v("qInco"),valid_until:v("qValid")||null,notes:v("qNotes")||null});
+      busy(f,false);
+      if(r.error){f.querySelector(".err").textContent="Could not send the quotation: "+r.error.message;return;}
+      countOpen();openTab("enquiries",q.id);
+    });
+    card.appendChild(h("h3",{style:"margin-top:1.2rem"},list.length?"Send an updated quotation":"Send your quotation"));
+    card.appendChild(f);
+    return card;
+  }
+
+  // Chat: carrega o histórico e recebe mensagens novas na hora (Realtime)
+  function chatBox(q){
+    var list=h("div",{class:"msgs","aria-live":"polite"}), seen={};
+    var ta=h("textarea",{maxlength:"4000",placeholder:"Write a message…","aria-label":"Message"});
+    var btn=h("button",{class:"btn",type:"submit"},"Send");
+    var form=h("form",{class:"send"},[ta,btn]);
+    var box=h("div",{class:"chat"},[list,form]);
+    var ROLE={supplier:"You",buyer:"Buyer",team:"India Brazil team"};
+    function add(m){
+      if(seen[m.id])return;seen[m.id]=1;
+      var mine=m.sender_role==="supplier";
+      list.appendChild(h("div",{class:"msg"+(mine?" mine":"")},[h("span",{class:"who"},(mine?"You":(m.sender_name||ROLE[m.sender_role]))+" · "+when(m.created_at)),m.body]));
+      list.scrollTop=list.scrollHeight;
+    }
+    sb.from("rfq_messages").select("*").eq("rfq_id",q.id).order("created_at").then(function(r){
+      if(r.error)return fail(r.error);
+      if(!r.data.length)list.appendChild(h("p",{class:"muted",style:"text-align:center"},"No messages yet. Say hello to the buyer!"));
+      r.data.forEach(add);
+    });
+    chan=sb.channel("rfq-"+q.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"rfq_messages",filter:"rfq_id=eq."+q.id},function(pl){add(pl.new);}).subscribe();
+    form.addEventListener("submit",async function(ev){
+      ev.preventDefault();var body=ta.value.trim();if(!body)return;btn.disabled=true;
+      var r=await sb.from("rfq_messages").insert({rfq_id:q.id,sender_role:"supplier",body:body}).select().single();
+      btn.disabled=false;
+      if(r.error)return fail(r.error);
+      ta.value="";var e=list.querySelector("p.muted");if(e)e.remove();add(r.data);
+    });
+    ta.addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();form.requestSubmit();}});
+    return box;
+  }
+  function stopChat(){if(chan){sb.removeChannel(chan);chan=null;}}
+
+  // --- Segurança ---
+  async function security(p){
+    var fs=(await sb.auth.mfa.listFactors()).data;
+    var f=h("form",null,[
+      h("div",{class:"field"},[h("label",{for:"cpPass"},"New password"),h("input",{id:"cpPass",type:"password",autocomplete:"new-password",minlength:"10",required:true}),h("p",{class:"hint"},"At least 10 characters.")]),
+      h("div",{class:"field"},[h("label",{for:"cpPass2"},"Confirm new password"),h("input",{id:"cpPass2",type:"password",autocomplete:"new-password",required:true})]),
+      h("button",{class:"btn",type:"submit"},"Change password"),h("p",{class:"err",role:"alert"}),h("p",{class:"ok",role:"status"})
+    ]);
+    f.addEventListener("submit",async function(ev){
+      ev.preventDefault();msg(f);
+      var a=f.querySelector("#cpPass").value,b=f.querySelector("#cpPass2").value;
+      if(!strong(a))return msg(f,"Password must have at least 10 characters.");
+      if(a!==b)return msg(f,"Passwords do not match.");
+      busy(f,true);var r=await sb.auth.updateUser({password:a});busy(f,false);
+      if(r.error)return msg(f,r.error.message);
+      f.reset();msg(f,"","Password changed.");
+    });
+    p.appendChild(h("div",{class:"grid"},[
+      h("div",{class:"card"},[h("h3",null,"Sign-in details"),dl([["Email",me.email],["Two-step verification",h("span",{class:"pill good"},"On")],["Authenticator added",fs.totp[0]?date(fs.totp[0].created_at):"–"]]),
+        h("p",{class:"hint",style:"margin-top:1rem"},"Changed phones? Contact us on WhatsApp and we will reset your two-step verification after confirming your identity.")]),
+      h("div",{class:"card"},[h("h3",null,"Change password"),f])
+    ]));
+  }
+
+  route().catch(fail);
+})();
+</script>
+</body>
+</html>

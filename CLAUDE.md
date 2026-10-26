@@ -7,10 +7,14 @@ pedidos de orçamento (RFQs) de compradores brasileiros.
 - index.html – landing page para fornecedores indianos (em inglês)
 - register.html – cadastro em 4 etapas, grava no Supabase (tabela `suppliers`, bucket `catalogues`)
 - admin.html – área do administrador (/admin): login Supabase Auth, só para quem está em `public.admins`
+- portal.html – portal do fornecedor (/portal, em inglês): conta ligada ao cadastro pelo e-mail confirmado,
+  2FA por app autenticador obrigatório, cadastro, catálogos, orçamentos (RFQs), cotações e chat
+- admin-orcamentos.html – time cria RFQs, vê cotações e conversa no chat (/admin-orcamentos, mesmo login do /admin)
 - tools/catalogues.py – baixa catálogos e salva resumos (usa SUPABASE_SECRET_KEY do .env, nunca vai para o site)
 - assets/logo – logos SVG (globo laranja/verde com seta, texto branco)
 - docs/supabase-setup.sql – schema do banco (não é servido no site)
 - docs/admin-setup.sql – admins, regras de acesso do /admin e tabela `catalogue_summaries`
+- docs/portal-setup.sql – portal: `my_supplier_ids()`, `has_2fa()`, tabelas `buyers`, `rfqs`, `rfq_quotes`, `rfq_messages`
 - vercel.json – configuração da hospedagem (cleanUrls: /register)
 
 ## Regras

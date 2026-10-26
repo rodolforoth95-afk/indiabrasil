@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<!--
+  Orçamentos – área do administrador (/admin-orcamentos)
+  O time India Brazil cria pedidos de orçamento (RFQs) para um fornecedor, acompanha as cotações
+  e conversa no chat como comprador ou como equipe. Mesmo login do /admin (tabela public.admins).
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Orçamentos | India Brazil</title>
+<link rel="icon" href="/assets/logo/india-brazil-icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --navy:#0F1A3D; --green:#0B7A55; --orange:#FF9100;
+  --ink:#151A2D; --muted:#5A6178; --line:#DCE0E8; --page:#F5F7FA; --surface:#FFFFFF; --field:#FFFFFF;
+  --chip:#EEF1F6; --error:#B42318; --focus:#2F6FED; --mine:#E7F4EE;
+  color-scheme:light; box-sizing:border-box;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ink:#ECEEF5; --muted:#A8AFC4; --line:#2B3250; --page:#0C1124; --surface:#151B33; --field:#1B2240; --chip:#232B4A;
+  --green:#2FB283; --error:#FF8A80; --focus:#7FA6FF; --mine:#173A31; color-scheme:dark;}}
+:root[data-theme="dark"]{--ink:#ECEEF5; --muted:#A8AFC4; --line:#2B3250; --page:#0C1124; --surface:#151B33; --field:#1B2240; --chip:#232B4A;
+  --green:#2FB283; --error:#FF8A80; --focus:#7FA6FF; --mine:#173A31; color-scheme:dark;}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;min-height:100vh;background:var(--page);color:var(--ink);font-family:"IBM Plex Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;font-size:15px}
+h1,h2,h3{line-height:1.2;margin:0 0 .5em;letter-spacing:-.01em}
+a{color:var(--green)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:4px}
+[hidden]{display:none!important}
+header{background:var(--navy);color:#fff}
+header .in{max-width:1180px;margin:0 auto;padding:0 16px;height:60px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+header img{height:34px;width:auto;display:block}
+header nav{display:flex;align-items:center;gap:1rem;font-size:.9rem}
+header nav a{color:#C9D0E6;text-decoration:none}
+header nav a[aria-current]{color:#fff;font-weight:600}
+main{max-width:1180px;margin:0 auto;padding:24px 16px 64px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}
+.btn{font:inherit;font-weight:600;border-radius:8px;padding:.55rem 1rem;border:1.5px solid transparent;cursor:pointer;background:var(--green);color:#fff;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;white-space:nowrap}
+.btn:hover{filter:brightness(1.08)}
+.btn[disabled]{opacity:.55;cursor:default;filter:none}
+.btn-ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+header .btn-ghost{color:#fff;border-color:rgba(255,255,255,.3);padding:.35rem .8rem}
+.btn-sm{padding:.3rem .7rem;font-size:.85rem}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:8px;padding:.55rem .75rem;width:100%}
+textarea{resize:vertical;min-height:4.5rem}
+input:focus,select:focus,textarea:focus{border-color:var(--focus);outline:none;box-shadow:0 0 0 3px rgba(47,111,237,.18)}
+label{display:block;font-weight:500;margin-bottom:.3rem}
+.field{margin-bottom:1rem}
+.hint{font-size:.85rem;color:var(--muted);margin:.3rem 0 0}
+.muted{color:var(--muted)}
+.err{color:var(--error);font-size:.9rem;margin:.6rem 0 0}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em}
+.bar{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:space-between;margin-bottom:14px}
+.bar .grow{flex:1 1 240px;display:flex;gap:.6rem}
+.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
+.tbl th,.tbl td{text-align:left;padding:.6rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+.tbl tr.row{cursor:pointer}
+.tbl tr.row:hover{background:var(--chip)}
+.scroll{overflow-x:auto}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.pill{display:inline-block;font-size:.78rem;font-weight:600;padding:.12rem .55rem;border-radius:99px;background:var(--chip);color:var(--muted);white-space:nowrap}
+.pill.good{background:rgba(11,122,85,.12);color:var(--green)}
+.pill.warn{background:rgba(255,145,0,.15);color:#B45F00}
+.pill.bad{background:rgba(180,35,24,.12);color:var(--error)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pill.warn{color:var(--orange)}}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px}
+.form2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 14px}
+.form2 .full{grid-column:1/-1}
+.form2 h3{grid-column:1/-1;margin-top:.4rem}
+dl{display:grid;grid-template-columns:max-content 1fr;gap:.35rem 1rem;margin:0}
+dt{color:var(--muted)}
+dd{margin:0;overflow-wrap:anywhere}
+.head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:1rem;align-items:flex-end;margin-bottom:16px}
+.head h1{font-size:1.4rem;margin:0}
+.chat{display:flex;flex-direction:column;height:480px}
+.msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:.6rem;padding:4px 2px 10px}
+.msg{max-width:80%;padding:.55rem .8rem;border-radius:12px;background:var(--chip);overflow-wrap:anywhere;white-space:pre-wrap}
+.msg.mine{align-self:flex-end;background:var(--mine)}
+.msg .who{display:block;font-size:.75rem;color:var(--muted);margin-bottom:.15rem;white-space:normal}
+.send{display:grid;grid-template-columns:auto 1fr auto;gap:.5rem;border-top:1px solid var(--line);padding-top:10px}
+.send select{width:auto}
+.send textarea{min-height:2.8rem;height:2.8rem}
+</style>
+</head>
+<body>
+<header><div class="in">
+  <a href="/admin"><img src="/assets/logo/india-brazil-logo-white.svg" alt="India Brazil"></a>
+  <nav id="nav" hidden><a href="/admin">Cadastros</a><a href="/admin-orcamentos" aria-current="page">Orçamentos</a><button class="btn btn-ghost btn-sm" id="logout" type="button">Sair</button></nav>
+</div></header>
+
+<main>
+  <div class="card empty" id="gate" hidden><p>Entre primeiro na <a href="/admin">área do administrador</a>.</p></div>
+  <section id="list" hidden></section>
+  <section id="create" hidden></section>
+  <section id="detail" hidden></section>
+  <p class="err" id="appErr" role="alert"></p>
+</main>
+
+<script>
+(function(){
+  var SUPABASE_URL="https://fwlgkmtttaelntnibifd.supabase.co";
+  var SUPABASE_ANON_KEY="sb_publishable_rOCe8m9bS5WTyUhS59fsQA_FEoMGE4C"; // publishable: só funciona com as regras do banco
+  var STATUS={open:["Novo","warn"],quoted:["Cotado","good"],negotiating:["Em negociação","warn"],won:["Fechado (pedido)","good"],lost:["Perdido","bad"],closed:["Encerrado",""]};
+  var CUR=["USD","INR","EUR","BRL"], INCO=["FOB","CIF","CFR","EXW","FCA","DAP","DDP"];
+  var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); // mesma sessão do /admin
+  var $=function(id){return document.getElementById(id);};
+  var suppliers=[], chan=null;
+
+  function h(tag,attrs,kids){
+    var e=document.createElement(tag);
+    Object.keys(attrs||{}).forEach(function(k){
+      if(k==="class")e.className=attrs[k];else if(k.slice(0,2)==="on")e.addEventListener(k.slice(2),attrs[k]);else if(attrs[k]!=null&&attrs[k]!==false)e.setAttribute(k,attrs[k]===true?"":attrs[k]);
+    });
+    [].concat(kids==null?[]:kids).forEach(function(c){if(c==null||c===false)return;e.appendChild(typeof c==="object"?c:document.createTextNode(String(c)));});
+    return e;
+  }
+  function txt(v){return v==null||v===""?"–":String(v);}
+  // Datas sem hora (2026-11-01) são lidas no fuso local, senão aparecem um dia antes
+  function date(v){if(/^\d{4}-\d{2}-\d{2}$/.test(v||""))v+="T00:00:00";return v?new Date(v).toLocaleDateString("pt-BR"):"–";}
+  function when(v){return new Date(v).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});}
+  function pill(k){var p=STATUS[k]||[k,""];return h("span",{class:"pill "+p[1]},p[0]);}
+  function dl(pairs){return h("dl",null,pairs.reduce(function(a,p){a.push(h("dt",null,p[0]),h("dd",null,p[1]&&p[1].nodeType?p[1]:txt(p[1])));return a;},[]));}
+  function one(v){return Array.isArray(v)?v[0]||null:v||null;}
+  function fail(e){console.error(e);$("appErr").textContent="Erro: "+((e&&e.message)||e);}
+  function show(id){["gate","list","create","detail"].forEach(function(v){$(v).hidden=v!==id;});$("appErr").textContent="";window.scrollTo(0,0);}
+  function sel(id,opts,val){var s=h("select",{id:id});opts.forEach(function(o){s.appendChild(typeof o==="string"?h("option",{value:o},o):h("option",{value:o[0]},o[1]));});if(val!=null)s.value=val;return s;}
+  function fld(label,input,cls){return h("div",{class:"field"+(cls?" "+cls:"")},[h("label",{for:input.id},label),input]);}
+
+  $("logout").addEventListener("click",async function(){await sb.auth.signOut();location.href="/admin";});
+
+  async function start(){
+    var s=(await sb.auth.getSession()).data.session;
+    if(!s)return show("gate");
+    var a=await sb.from("admins").select("user_id").eq("user_id",s.user.id).maybeSingle();
+    if(a.error||!a.data)return show("gate");
+    $("nav").hidden=false;
+    var r=await sb.from("suppliers").select("id,reference,company_name").order("company_name");
+    if(r.error)return fail(r.error);
+    suppliers=r.data;
+    route();
+  }
+  function route(){
+    if(chan){sb.removeChannel(chan);chan=null;}
+    var m=location.hash.match(/^#\/(.+)$/);
+    var p=m?(m[1]==="novo"?renderCreate():renderDetail(decodeURIComponent(m[1]))):renderList();
+    p.catch(fail);
+  }
+  window.addEventListener("hashchange",function(){if(!$("nav").hidden)route();});
+
+  // --- Lista ---
+  async function renderList(){
+    var d=$("list");d.textContent="";show("list");
+    var r=await sb.from("rfqs").select("id,code,created_at,product,buyer_label,status,quantity,unit,suppliers(company_name,reference),rfq_quotes(id)").order("created_at",{ascending:false});
+    if(r.error)return fail(r.error);
+    var fs=sel("fs",[["","Todos os status"]].concat(Object.keys(STATUS).map(function(k){return [k,STATUS[k][0]];})));
+    var q=h("input",{type:"search",placeholder:"Buscar produto, fornecedor, código…","aria-label":"Buscar"});
+    var tb=h("tbody");
+    function draw(){
+      var t=q.value.trim().toLowerCase();tb.textContent="";
+      var rows=r.data.filter(function(x){var s=one(x.suppliers)||{};return (!fs.value||x.status===fs.value)&&(!t||[x.code,x.product,x.buyer_label,s.company_name,s.reference].join(" ").toLowerCase().indexOf(t)>-1);});
+      rows.forEach(function(x){
+        var s=one(x.suppliers)||{},go=function(){location.hash="#/"+x.id;};
+        tb.appendChild(h("tr",{class:"row",tabindex:"0",onclick:go,onkeydown:function(e){if(e.key==="Enter")go();}},[
+          h("td",null,date(x.created_at)),h("td",{class:"mono"},x.code),h("td",null,h("b",null,x.product)),h("td",null,[s.company_name||"–",h("div",{class:"muted mono"},s.reference||"")]),
+          h("td",null,x.buyer_label),h("td",null,x.quantity!=null?x.quantity+" "+(x.unit||""):"–"),h("td",null,String((x.rfq_quotes||[]).length)),h("td",null,pill(x.status))]));
+      });
+      if(!rows.length)tb.appendChild(h("tr",null,h("td",{colspan:"8",class:"empty"},"Nenhum orçamento.")));
+    }
+    q.addEventListener("input",draw);fs.addEventListener("change",draw);
+    d.appendChild(h("div",{class:"bar"},[h("div",{class:"grow"},[q,fs]),h("a",{class:"btn",href:"#/novo"},"+ Novo orçamento")]));
+    d.appendChild(h("div",{class:"card scroll",style:"padding:0"},h("table",{class:"tbl"},[
+      h("thead",null,h("tr",null,["Data","Código","Produto","Fornecedor","Comprador (visível)","Qtd.","Cotações","Status"].map(function(c){return h("th",null,c);}))),tb])));
+    draw();
+  }
+
+  // --- Novo orçamento ---
+  async function renderCreate(){
+    var d=$("create");d.textContent="";show("create");
+    var f=h("form",{class:"card form2"},[
+      h("h3",null,"Fornecedor"),
+      fld("Fornecedor *",sel("fSup",[["","Escolha…"]].concat(suppliers.map(function(s){return [s.id,s.company_name+" ("+s.reference+")"];}))),"full"),
+      h("h3",null,"Comprador brasileiro (interno – o fornecedor não vê)"),
+      fld("Empresa *",h("input",{id:"bCompany",required:true})),fld("Contato",h("input",{id:"bContact"})),
+      fld("E-mail",h("input",{id:"bEmail",type:"email"})),fld("Telefone / WhatsApp",h("input",{id:"bPhone"})),
+      fld("Cidade",h("input",{id:"bCity"})),fld("UF",h("input",{id:"bState",maxlength:"2"})),
+      h("div",{class:"field full"},[h("label",{for:"fLabel"},"Como o comprador aparece para o fornecedor *"),h("input",{id:"fLabel",required:true,placeholder:"Ex.: Textile distributor – São Paulo, Brazil"}),h("p",{class:"hint"},"Em inglês e sem nome ou contato, para a negociação passar pela India Brazil.")]),
+      h("h3",null,"Pedido (o fornecedor vê; escreva em inglês)"),
+      fld("Produto *",h("input",{id:"fProduct",required:true,placeholder:"Ex.: Cotton baby look T-shirts"}),"full"),
+      h("div",{class:"field full"},[h("label",{for:"fDetails"},"Detalhes"),h("textarea",{id:"fDetails",placeholder:"Specs, colours, sizes, packaging, certifications…"})]),
+      fld("Quantidade",h("input",{id:"fQty",type:"number",min:"0",step:"any"})),fld("Unidade",h("input",{id:"fUnit",placeholder:"pcs, kg, m…"})),
+      fld("Preço-alvo (unitário)",h("input",{id:"fTarget",type:"number",min:"0",step:"any"})),fld("Moeda",sel("fCur",CUR,"USD")),
+      fld("Incoterm",sel("fInco",[""].concat(INCO),"FOB")),fld("Destino",h("input",{id:"fDest",placeholder:"Ex.: Santos, SP"})),
+      fld("Precisa até",h("input",{id:"fNeed",type:"date"})),
+      h("div",{class:"full"},[h("button",{class:"btn",type:"submit"},"Criar e enviar ao fornecedor"),h("a",{class:"btn btn-ghost",href:"#",style:"margin-left:.5rem"},"Cancelar"),h("p",{class:"err",role:"alert"})])
+    ]);
+    f.addEventListener("submit",async function(ev){
+      ev.preventDefault();var v=function(id){return f.querySelector("#"+id).value.trim();},err=f.querySelector(".err");err.textContent="";
+      if(!v("fSup")){err.textContent="Escolha o fornecedor.";return;}
+      f.querySelector("button[type=submit]").disabled=true;
+      var b=await sb.from("buyers").insert({company_name:v("bCompany"),contact_name:v("bContact")||null,email:v("bEmail")||null,phone:v("bPhone")||null,city:v("bCity")||null,state:v("bState").toUpperCase()||null}).select("id").single();
+      if(b.error){f.querySelector("button[type=submit]").disabled=false;return fail(b.error);}
+      var num=function(id){return v(id)===""?null:+v(id);};
+      var r=await sb.from("rfqs").insert({supplier_id:v("fSup"),buyer_id:b.data.id,buyer_label:v("fLabel"),product:v("fProduct"),details:v("fDetails")||null,
+        quantity:num("fQty"),unit:v("fUnit")||null,target_price:num("fTarget"),currency:v("fCur"),incoterm:v("fInco")||null,destination:v("fDest")||null,needed_by:v("fNeed")||null}).select("id").single();
+      if(r.error){f.querySelector("button[type=submit]").disabled=false;return fail(r.error);}
+      location.hash="#/"+r.data.id;
+    });
+    d.appendChild(h("div",{class:"head"},h("h1",null,"Novo orçamento")));
+    d.appendChild(f);
+  }
+
+  // --- Detalhe ---
+  async function renderDetail(id){
+    var d=$("detail");d.textContent="";show("detail");
+    var r=await sb.from("rfqs").select("*,suppliers(company_name,reference,contact_name,email,mobile),buyers(*)").eq("id",id).maybeSingle();
+    if(r.error)return fail(r.error);
+    if(!r.data){d.appendChild(h("p",{class:"empty"},"Orçamento não encontrado."));return;}
+    var q=r.data,s=one(q.suppliers)||{},b=one(q.buyers)||{};
+    var qs=await sb.from("rfq_quotes").select("*").eq("rfq_id",q.id).order("created_at",{ascending:false});
+    if(qs.error)return fail(qs.error);
+
+    var st=sel("st",Object.keys(STATUS).map(function(k){return [k,STATUS[k][0]];}),q.status);
+    st.addEventListener("change",async function(){
+      var u=await sb.from("rfqs").update({status:st.value,updated_at:new Date().toISOString()}).eq("id",q.id);
+      if(u.error){st.value=q.status;return fail(u.error);}q.status=st.value;
+    });
+    d.appendChild(h("a",{class:"btn btn-ghost btn-sm",href:"#",style:"margin-bottom:14px"},"← Todos os orçamentos"));
+    d.appendChild(h("div",{class:"head"},[h("div",null,[h("div",{class:"muted mono"},q.code+" · criado em "+date(q.created_at)),h("h1",null,q.product)]),h("div",null,[h("label",{for:"st"},"Status"),st])]));
+
+    var quotes=h("div",{class:"card"},h("h3",null,"Cotações do fornecedor ("+qs.data.length+")"));
+    if(qs.data.length)quotes.appendChild(h("div",{class:"scroll"},h("table",{class:"tbl"},[
+      h("thead",null,h("tr",null,["Enviada","Preço unit.","MOQ","Prazo","Incoterm","Validade","Obs."].map(function(c){return h("th",null,c);}))),
+      h("tbody",null,qs.data.map(function(x){return h("tr",null,[h("td",null,when(x.created_at)),h("td",null,h("b",null,x.unit_price+" "+x.currency)),h("td",null,txt(x.moq)),
+        h("td",null,x.lead_time_days!=null?x.lead_time_days+" dias":"–"),h("td",null,txt(x.incoterm)),h("td",null,date(x.valid_until)),h("td",{style:"white-space:pre-wrap"},txt(x.notes))]);}))
+    ])));
+    else quotes.appendChild(h("p",{class:"muted"},"O fornecedor ainda não enviou cotação."));
+
+    d.appendChild(h("div",{class:"grid"},[
+      h("div",null,[
+        h("div",{class:"card",style:"margin-bottom:16px"},[h("h3",null,"Pedido (o fornecedor vê)"),dl([["Comprador",q.buyer_label],["Quantidade",q.quantity!=null?q.quantity+" "+(q.unit||""):null],
+          ["Preço-alvo",q.target_price!=null?q.target_price+" "+(q.currency||""):null],["Incoterm",q.incoterm],["Destino",q.destination],["Precisa até",q.needed_by?date(q.needed_by):null]]),
+          q.details?h("p",{style:"margin:1rem 0 0;white-space:pre-wrap"},q.details):null]),
+        h("div",{class:"grid",style:"margin-bottom:16px"},[
+          h("div",{class:"card"},[h("h3",null,"Fornecedor"),dl([["Empresa",h("a",{href:"/admin#/"+s.reference},s.company_name)],["Contato",s.contact_name],["E-mail",s.email],["Celular",s.mobile]])]),
+          h("div",{class:"card"},[h("h3",null,"Comprador (interno)"),dl([["Empresa",b.company_name],["Contato",b.contact_name],["E-mail",b.email],["Telefone",b.phone],["Cidade",[b.city,b.state].filter(Boolean).join("/")]])])
+        ]),
+        quotes
+      ]),
+      h("div",{class:"card"},[h("h3",null,"Chat"),chatBox(q)])
+    ]));
+  }
+
+  function chatBox(q){
+    var list=h("div",{class:"msgs","aria-live":"polite"}),seen={};
+    var as=sel("as",[["buyer","Como comprador"],["team","Como equipe India Brazil"]],"team");
+    var ta=h("textarea",{maxlength:"4000",placeholder:"Mensagem (em inglês)…","aria-label":"Mensagem"});
+    var btn=h("button",{class:"btn",type:"submit"},"Enviar");
+    var form=h("form",{class:"send"},[as,ta,btn]);
+    var ROLE={supplier:"Fornecedor",buyer:"Comprador",team:"Equipe India Brazil"};
+    function add(m){
+      if(seen[m.id])return;seen[m.id]=1;
+      var e=list.querySelector("p.muted");if(e)e.remove();
+      list.appendChild(h("div",{class:"msg"+(m.sender_role!=="supplier"?" mine":"")},[h("span",{class:"who"},ROLE[m.sender_role]+(m.sender_name?" – "+m.sender_name:"")+" · "+when(m.created_at)),m.body]));
+      list.scrollTop=list.scrollHeight;
+    }
+    sb.from("rfq_messages").select("*").eq("rfq_id",q.id).order("created_at").then(function(r){
+      if(r.error)return fail(r.error);
+      if(!r.data.length)list.appendChild(h("p",{class:"muted",style:"text-align:center"},"Nenhuma mensagem ainda."));
+      r.data.forEach(add);
+    });
+    chan=sb.channel("adm-rfq-"+q.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"rfq_messages",filter:"rfq_id=eq."+q.id},function(pl){add(pl.new);}).subscribe();
+    form.addEventListener("submit",async function(ev){
+      ev.preventDefault();var body=ta.value.trim();if(!body)return;btn.disabled=true;
+      var r=await sb.from("rfq_messages").insert({rfq_id:q.id,sender_role:as.value,sender_name:as.value==="buyer"?q.buyer_label:"India Brazil team",body:body}).select().single();
+      btn.disabled=false;
+      if(r.error)return fail(r.error);
+      ta.value="";add(r.data);
+    });
+    ta.addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();form.requestSubmit();}});
+    return h("div",{class:"chat"},[list,form]);
+  }
+
+  start().catch(fail);
+})();
+</script>
+</body>
+</html>
