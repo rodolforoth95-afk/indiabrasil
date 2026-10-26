@@ -26,7 +26,7 @@ create table if not exists public.suppliers (
   contact_name        text not null,
   designation         text,
   email               text not null,
-  mobile              text not null,                     -- formato +91XXXXXXXXXX
+  mobile              text not null,                     -- formato +<código do país><número>, ex.: +91XXXXXXXXXX
   whatsapp            boolean default true,
 
   -- Produtos
@@ -52,7 +52,7 @@ create table if not exists public.suppliers (
   internal_notes      text,
 
   constraint iec_format   check (iec ~ '^[A-Z0-9]{10}$'),
-  constraint mobile_format check (mobile ~ '^\+91[6-9][0-9]{9}$'),
+  constraint mobile_format check (mobile ~ '^\+91[6-9][0-9]{9}$' or (mobile !~ '^\+91' and mobile ~ '^\+[1-9][0-9]{6,17}$')),
   constraint consent_given check (consent = true)
 );
 
