@@ -166,7 +166,12 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
     ev.preventDefault();$("loginErr").textContent="";$("loginBtn").disabled=true;
     var r=await sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});
     $("loginBtn").disabled=false;
-    if(r.error){$("loginErr").textContent="E-mail ou senha incorretos.";return;}
+    if(r.error){
+      var code=r.error.code||"";
+      $("loginErr").textContent=code==="email_not_confirmed"?"Este e-mail ainda não foi confirmado no Supabase.":
+        code==="invalid_credentials"?"E-mail ou senha incorretos.":"Não foi possível entrar: "+r.error.message;
+      return;
+    }
     $("pw").value="";start();
   });
   $("logout").addEventListener("click",async function(){await sb.auth.signOut();location.hash="";start();});
