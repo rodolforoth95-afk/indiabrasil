@@ -102,4 +102,7 @@ select reference, created_at, status, company_name, state, contact_name, designa
 from public.suppliers
 order by created_at desc;
 
-revoke all on public.suppliers_pipeline from anon;
+-- security_invoker: a visão respeita as regras (RLS) da tabela suppliers.
+-- Sem isso, qualquer pessoa que criasse uma conta no Supabase poderia ler todos os cadastros.
+alter view public.suppliers_pipeline set (security_invoker = true);
+revoke all on public.suppliers_pipeline from anon, authenticated;
