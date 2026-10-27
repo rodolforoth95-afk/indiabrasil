@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>India Brazil | Receive Quotation Requests from Brazilian Buyers</title>
+<script src="/assets/js/home-i18n.js"></script>
 <meta name="description" content="Sell to Brazil without a trade fair, an agent or an upfront fee. India Brazil brings quotation requests (RFQs) from Brazilian buyers to Indian manufacturers. Free for 6 months, no card.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20160%20160%22%20role%3D%22img%22%20aria-label%3D%22India%20Brazil%22%3E%3Ctitle%3EIndia%20Brazil%3C/title%3E%3Cdefs%3E%0A%3ClinearGradient%20id%3D%22saf-ic%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23FFC400%22/%3E%3Cstop%20offset%3D%22.55%22%20stop-color%3D%22%23FF9100%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23FF5A00%22/%3E%3C/linearGradient%3E%0A%3ClinearGradient%20id%3D%22grn-ic%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%2300E676%22/%3E%3Cstop%20offset%3D%22.5%22%20stop-color%3D%22%2300C853%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23009A3E%22/%3E%3C/linearGradient%3E%0A%3CclipPath%20id%3D%22clip-ic%22%3E%3Ccircle%20cx%3D%2280%22%20cy%3D%2280%22%20r%3D%2280%22/%3E%3C/clipPath%3E%0A%3Cfilter%20id%3D%22sh-ic%22%20x%3D%22-20%25%22%20y%3D%22-20%25%22%20width%3D%22140%25%22%20height%3D%22140%25%22%3E%3CfeDropShadow%20dx%3D%220%22%20dy%3D%222%22%20stdDeviation%3D%222%22%20flood-color%3D%22%23000%22%20flood-opacity%3D%22.25%22/%3E%3C/filter%3E%0A%3C/defs%3E%0A%3Cg%20clip-path%3D%22url%28%23clip-ic%29%22%3E%0A%3Crect%20width%3D%22160%22%20height%3D%22160%22%20fill%3D%22url%28%23saf-ic%29%22/%3E%0A%3Cpath%20d%3D%22M-5%20130%20Q60%2070%20120%2050%20L175%2032%20L175%20175%20L-5%20175%20Z%22%20fill%3D%22url%28%23grn-ic%29%22/%3E%0A%3Cg%20filter%3D%22url%28%23sh-ic%29%22%3E%0A%3Cpath%20d%3D%22M-5%20130%20Q60%2070%20120%2050%22%20fill%3D%22none%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%2215%22/%3E%0A%3Cpath%20d%3D%22M144.7%2041.8%20L125.1%2065.2%20L114.9%2034.8%20Z%22%20fill%3D%22%23FFFFFF%22/%3E%0A%3C/g%3E%0A%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -316,6 +317,22 @@ details p{margin:.6rem 0 0;color:var(--muted)}
 #how .city figcaption{color:#fff}
 @media (max-width:900px){.how-head{grid-template-columns:1fr}#how .route{height:320px;max-width:520px}}
 
+/* Seletor de idioma no canto do topo */
+.lang-sw{position:relative}
+.lang-sw>button{display:flex;align-items:center;gap:.35rem;font:inherit;font-size:.85rem;font-weight:600;color:#E6EAF5;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:.35rem .65rem;cursor:pointer}
+.lang-sw>button:hover{background:rgba(255,255,255,.16);color:#fff}
+.lang-sw>button svg{width:16px;height:16px}
+.lang-sw>button .car{width:10px;height:7px;transition:transform .15s}
+.lang-sw>button[aria-expanded="true"] .car{transform:rotate(180deg)}
+.lang-menu{position:absolute;right:0;top:calc(100% + 8px);min-width:180px;background:#fff;border-radius:12px;box-shadow:0 18px 40px rgba(0,0,0,.3);padding:.35rem;z-index:40}
+.lang-menu button{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;font:inherit;font-size:.95rem;color:#151A2D;background:none;border:0;border-radius:8px;padding:.55rem .7rem;cursor:pointer}
+.lang-menu button:hover,.lang-menu button:focus{background:#FFF1DE;outline:none}
+.lang-menu button[aria-checked="true"]{font-weight:700}
+.lang-menu button[aria-checked="true"]::after{content:"✓";color:#0B7A55}
+@media (max-width:860px){nav{gap:.8rem}}
+header .btn{white-space:nowrap}
+/* No celular o botão do topo sai: o botão grande do banner aparece logo abaixo e não quebra em várias linhas */
+@media (max-width:520px){header nav>.btn{display:none}}
 footer .disc{flex-basis:100%;font-size:.82rem;color:#8E97B8;margin:0}
 footer{background:var(--navy);color:#B9C1DA;padding:2.5rem 0;font-size:.92rem}
 footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:1.2rem}
@@ -355,6 +372,11 @@ footer a{color:#fff}
       <a class="nl" href="#how">How it works</a>
       <a class="nl" href="#faq">FAQ</a>
       <a class="btn btn-saffron" href="#lead" data-focus-lead>Get 6 months free</a>
+      <!-- Idioma: English, हिन्दी, Português (BR), Español (textos em assets/js/home-i18n.js) -->
+      <div class="lang-sw" id="langSw">
+        <button type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Language / भाषा / Idioma"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.8 10h16.4M10 1.8c2.4 2.3 3.6 5 3.6 8.2s-1.2 5.9-3.6 8.2c-2.4-2.3-3.6-5-3.6-8.2s1.2-5.9 3.6-8.2z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span id="langCode">EN</span><svg class="car" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+        <div class="lang-menu" role="menu" hidden></div>
+      </div>
     </nav>
   </div>
 </header>
@@ -413,7 +435,7 @@ footer a{color:#fff}
             <div class="tel" id="leadTel">
               <button type="button" class="cc-btn" id="ccBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="Country code: India +91"><img id="ccFlag" src="https://flagcdn.com/w40/in.png" width="22" height="16" alt=""><span id="ccDial">+91</span><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
               <input id="leadMobile" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile" autocomplete="tel-national">
-              <div class="cc-pop" id="ccPop" hidden>
+              <div class="cc-pop" id="ccPop" data-no-i18n hidden>
                 <input type="search" id="ccSearch" placeholder="Search country or code" aria-label="Search country" autocomplete="off">
                 <ul role="listbox" id="ccList" aria-label="Countries"></ul>
               </div>
@@ -685,7 +707,7 @@ footer a{color:#fff}
     var q=ccSearch.value.trim().toLowerCase().replace(/^\+/,"");
     shown=COUNTRIES.filter(function(c){return !q||c[1].toLowerCase().indexOf(q)>-1||c[2].indexOf(q)===0||c[0].toLowerCase()===q;});
     ccList.textContent="";ccIdx=shown.length?0:-1;
-    if(!shown.length){var e=document.createElement("li");e.className="none";e.textContent="No country found";ccList.appendChild(e);return;}
+    if(!shown.length){var e=document.createElement("li");e.className="none";e.textContent=T("No country found");ccList.appendChild(e);return;}
     shown.forEach(function(c,i){
       var li=document.createElement("li"),img=document.createElement("img"),n=document.createElement("span"),d=document.createElement("b");
       li.setAttribute("role","option");li.id="cc-"+c[0];li.setAttribute("aria-selected",c[0]===ccIso?"true":"false");
@@ -704,9 +726,10 @@ footer a{color:#fff}
     ccIso=iso;var c=COUNTRIES.find(function(x){return x[0]===iso;}),india=c[2]==="91",m=document.getElementById("leadMobile");
     document.getElementById("ccFlag").src=FLAG(iso);document.getElementById("ccDial").textContent="+"+c[2];
     ccBtn.setAttribute("aria-label","Country code: "+c[1]+" +"+c[2]);
-    m.maxLength=india?10:14;m.placeholder=india?"10-digit mobile":"Mobile number";
+    m.maxLength=india?10:14;ccSetPh();
     ccClose();m.focus();
   }
+  function ccSetPh(){setPh(document.getElementById("leadMobile"),dial()==="91"?"10-digit mobile":"Mobile number");}
   ccBtn.addEventListener("click",function(){if(ccPop.hidden)ccOpen();else ccClose(true);});
   ccSearch.addEventListener("input",ccRender);
   ccSearch.addEventListener("keydown",function(e){
@@ -717,19 +740,32 @@ footer a{color:#fff}
   });
   document.addEventListener("mousedown",function(e){if(!ccPop.hidden&&!document.getElementById("leadTel").contains(e.target))ccClose();});
 
-  var form=document.getElementById("lead"),cat=null;
+  var form=document.getElementById("lead"),cat=null,curStep=1;
   var $=function(id){return document.getElementById(id);};
-  function step(n){
-    form.querySelectorAll("[data-lead]").forEach(function(d){d.hidden=+d.dataset.lead!==n;});
-    $("leadStepTxt").textContent="Step "+n+" of 3";$("leadBar").style.width=(n===1?12:55)+"%";
-    if(n===2){var d=DEMAND[cat];$("demandVal").textContent=d[0];$("demandTxt").textContent=d[1]+" Source: UN COMTRADE.";setTimeout(function(){$("leadProduct").focus();},50);}
+  // Textos criados pelo formulário passam pelo tradutor da página (assets/js/home-i18n.js)
+  var T=function(s){return window.I18N?window.I18N.t(s):s;};
+  // Valores em US$ no formato de cada idioma (bn/mn → bi/mi, mil M/M, अरब/मिलियन)
+  function money(v){
+    var l=window.I18N?window.I18N.lang():"en";
+    if(l==="pt")return v.replace(/(\d)\.(\d)/,"$1,$2").replace(/ bn$/," bi").replace(/ mn$/," mi");
+    if(l==="es")return v.replace(/(\d)\.(\d)/,"$1,$2").replace(/ bn$/," mil M").replace(/ mn$/," M");
+    if(l==="hi")return v.replace(/ bn$/," अरब").replace(/ mn$/," मिलियन");
+    return v;
   }
+  function setPh(el,en){el.__enPh=en;el.setAttribute("placeholder",T(en));}
+  function step(n,quiet){
+    curStep=n;
+    form.querySelectorAll("[data-lead]").forEach(function(d){d.hidden=+d.dataset.lead!==n;});
+    $("leadStepTxt").textContent=T("Step "+n+" of 3");$("leadBar").style.width=(n===1?12:55)+"%";
+    if(n===2){var d=DEMAND[cat];$("demandVal").textContent=money(d[0]);$("demandTxt").textContent=T(d[1])+" "+T("Source: UN COMTRADE.");if(!quiet)setTimeout(function(){$("leadProduct").focus();},50);}
+  }
+  if(window.I18N)window.I18N.onChange(function(){step(curStep,true);ccSetPh();$("leadErr1").textContent="";$("leadErr2").textContent="";});
   function pick(c){
     cat=c;$("leadErr1").textContent="";
     form.querySelectorAll("[data-c]").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.c===c?"true":"false");});
   }
   form.querySelectorAll("[data-c]").forEach(function(b){b.addEventListener("click",function(){pick(b.dataset.c);});});
-  $("leadNext").addEventListener("click",function(){if(!cat){$("leadErr1").textContent="Choose what you manufacture.";return;}step(2);});
+  $("leadNext").addEventListener("click",function(){if(!cat){$("leadErr1").textContent=T("Choose what you manufacture.");return;}step(2);});
   $("leadBack").addEventListener("click",function(){step(1);});
   // Botões "See demand" e barras do gráfico levam até aqui (com a categoria já escolhida, se houver)
   function focusLead(c){
@@ -744,8 +780,8 @@ footer a{color:#fff}
     e.preventDefault();
     var m=$("leadMobile").value.replace(/\D/g,""),em=$("leadEmail").value.trim(),pr=$("leadProduct").value.trim();
     var india=dial()==="91";
-    if(india?!/^[6-9]\d{9}$/.test(m):!/^\d{6,14}$/.test(m)){$("leadErr2").textContent=india?"Please enter your 10-digit WhatsApp number.":"Please enter a valid WhatsApp number, digits only.";$("leadMobile").focus();return;}
-    if(em&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)){$("leadErr2").textContent="Please check the email address.";$("leadEmail").focus();return;}
+    if(india?!/^[6-9]\d{9}$/.test(m):!/^\d{6,14}$/.test(m)){$("leadErr2").textContent=T(india?"Please enter your 10-digit WhatsApp number.":"Please enter a valid WhatsApp number, digits only.");$("leadMobile").focus();return;}
+    if(em&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)){$("leadErr2").textContent=T("Please check the email address.");$("leadEmail").focus();return;}
     $("leadErr2").textContent="";
     var q=new URLSearchParams(location.search);
     var lead={category:LABEL[cat],product:pr||null,mobile:"+"+dial()+m,email:em||null,utm_source:q.get("utm_source"),utm_campaign:q.get("utm_campaign")};
