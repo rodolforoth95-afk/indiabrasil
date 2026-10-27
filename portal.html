@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="/assets/js/rfq-chat.js"></script>
 <style>
 :root{
   --navy:#0F1A3D; --green:#0B7A55; --green-2:#00C853; --orange:#FF9100;
@@ -111,14 +112,6 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
 .form2{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0 14px}
 .form2 .full{grid-column:1/-1}
 
-/* Chat */
-.chat{display:flex;flex-direction:column;height:480px}
-.msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:.6rem;padding:4px 2px 10px}
-.msg{max-width:80%;padding:.55rem .8rem;border-radius:12px;background:var(--chip);overflow-wrap:anywhere;white-space:pre-wrap}
-.msg.mine{align-self:flex-end;background:var(--mine)}
-.msg .who{display:block;font-size:.75rem;color:var(--muted);margin-bottom:.15rem;white-space:normal}
-.send{display:flex;gap:.5rem;border-top:1px solid var(--line);padding-top:10px}
-.send textarea{min-height:2.8rem;height:2.8rem}
 </style>
 </head>
 <body>
@@ -485,11 +478,14 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
       h("div",{class:"card",style:"margin-bottom:16px"},[h("h3",null,"Request"),dl([
         ["Buyer",q.buyer_label],["Quantity",q.quantity!=null?q.quantity+" "+(q.unit||""):null],
         ["Target price",q.target_price!=null?q.target_price+" "+(q.currency||""):null],["Incoterm",q.incoterm],
-        ["Destination",q.destination],["Needed by",q.needed_by?date(q.needed_by):null],["Received",date(q.created_at)]]),
+        ["Destination",q.destination],["Needed by",q.needed_by?date(q.needed_by):null],["Received",date(q.created_at)],
+        ["Source",q.origin==="marketplace"?"India Brasil marketplace":"India Brasil team"]]),
+        q.product_id?h("p",{style:"margin:.6rem 0 0"},h("a",{href:"/marketplace#/produto/"+q.product_id,target:"_blank",rel:"noopener"},"See the product on the marketplace")):null,
         q.details?h("p",{style:"margin:1rem 0 0;white-space:pre-wrap"},q.details):null]),
       quotesCard(q,qs.data)
     ]);
-    var right=h("div",{class:"card"},[h("h3",null,"Chat with the buyer"),chatBox(q)]);
+    chan=RfqChat.mount({sb:sb,rfq:q,me:"supplier",lang:"en",onError:fail});
+    var right=h("div",{class:"card"},[h("h3",null,"Chat with the buyer"),h("p",{class:"hint",style:"margin:-.3rem 0 .6rem"},"Our team follows this conversation and helps with translation. Use 📎 to send price lists, photos or specifications."),chan.el]);
     p.appendChild(h("div",{class:"grid"},[left,right]));
   }
 
@@ -529,37 +525,8 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
     return card;
   }
 
-  // Chat: carrega o histórico e recebe mensagens novas na hora (Realtime)
-  function chatBox(q){
-    var list=h("div",{class:"msgs","aria-live":"polite"}), seen={};
-    var ta=h("textarea",{maxlength:"4000",placeholder:"Write a message…","aria-label":"Message"});
-    var btn=h("button",{class:"btn",type:"submit"},"Send");
-    var form=h("form",{class:"send"},[ta,btn]);
-    var box=h("div",{class:"chat"},[list,form]);
-    var ROLE={supplier:"You",buyer:"Buyer",team:"India Brazil team"};
-    function add(m){
-      if(seen[m.id])return;seen[m.id]=1;
-      var mine=m.sender_role==="supplier";
-      list.appendChild(h("div",{class:"msg"+(mine?" mine":"")},[h("span",{class:"who"},(mine?"You":(m.sender_name||ROLE[m.sender_role]))+" · "+when(m.created_at)),m.body]));
-      list.scrollTop=list.scrollHeight;
-    }
-    sb.from("rfq_messages").select("*").eq("rfq_id",q.id).order("created_at").then(function(r){
-      if(r.error)return fail(r.error);
-      if(!r.data.length)list.appendChild(h("p",{class:"muted",style:"text-align:center"},"No messages yet. Say hello to the buyer!"));
-      r.data.forEach(add);
-    });
-    chan=sb.channel("rfq-"+q.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"rfq_messages",filter:"rfq_id=eq."+q.id},function(pl){add(pl.new);}).subscribe();
-    form.addEventListener("submit",async function(ev){
-      ev.preventDefault();var body=ta.value.trim();if(!body)return;btn.disabled=true;
-      var r=await sb.from("rfq_messages").insert({rfq_id:q.id,sender_role:"supplier",body:body}).select().single();
-      btn.disabled=false;
-      if(r.error)return fail(r.error);
-      ta.value="";var e=list.querySelector("p.muted");if(e)e.remove();add(r.data);
-    });
-    ta.addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();form.requestSubmit();}});
-    return box;
-  }
-  function stopChat(){if(chan){sb.removeChannel(chan);chan=null;}}
+  // Chat do pedido (componente compartilhado em /assets/js/rfq-chat.js, com anexos)
+  function stopChat(){if(chan){chan.stop();chan=null;}}
 
   // --- Segurança ---
   async function security(p){

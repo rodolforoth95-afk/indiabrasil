@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="/assets/js/rfq-chat.js"></script>
 <style>
 :root{
   --navy:#0F1A3D; --green:#0B7A55; --orange:#FF9100;
@@ -79,14 +80,6 @@ dt{color:var(--muted)}
 dd{margin:0;overflow-wrap:anywhere}
 .head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:1rem;align-items:flex-end;margin-bottom:16px}
 .head h1{font-size:1.4rem;margin:0}
-.chat{display:flex;flex-direction:column;height:480px}
-.msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:.6rem;padding:4px 2px 10px}
-.msg{max-width:80%;padding:.55rem .8rem;border-radius:12px;background:var(--chip);overflow-wrap:anywhere;white-space:pre-wrap}
-.msg.mine{align-self:flex-end;background:var(--mine)}
-.msg .who{display:block;font-size:.75rem;color:var(--muted);margin-bottom:.15rem;white-space:normal}
-.send{display:grid;grid-template-columns:auto 1fr auto;gap:.5rem;border-top:1px solid var(--line);padding-top:10px}
-.send select{width:auto}
-.send textarea{min-height:2.8rem;height:2.8rem}
 </style>
 </head>
 <body>
@@ -147,7 +140,7 @@ dd{margin:0;overflow-wrap:anywhere}
     route();
   }
   function route(){
-    if(chan){sb.removeChannel(chan);chan=null;}
+    if(chan){chan.stop();chan=null;}
     var m=location.hash.match(/^#\/(.+)$/);
     var p=m?(m[1]==="novo"?renderCreate():renderDetail(decodeURIComponent(m[1]))):renderList();
     p.catch(fail);
@@ -245,46 +238,17 @@ dd{margin:0;overflow-wrap:anywhere}
     d.appendChild(h("div",{class:"grid"},[
       h("div",null,[
         h("div",{class:"card",style:"margin-bottom:16px"},[h("h3",null,"Pedido (o fornecedor vê)"),dl([["Comprador",q.buyer_label],["Quantidade",q.quantity!=null?q.quantity+" "+(q.unit||""):null],
-          ["Preço-alvo",q.target_price!=null?q.target_price+" "+(q.currency||""):null],["Incoterm",q.incoterm],["Destino",q.destination],["Precisa até",q.needed_by?date(q.needed_by):null]]),
+          ["Preço-alvo",q.target_price!=null?q.target_price+" "+(q.currency||""):null],["Incoterm",q.incoterm],["Destino",q.destination],["Precisa até",q.needed_by?date(q.needed_by):null],["Origem",q.origin==="marketplace"?"Marketplace (comprador)":"Criado pela equipe"]]),
+          q.product_id?h("p",{style:"margin:.6rem 0 0"},h("a",{href:"/marketplace#/produto/"+q.product_id,target:"_blank",rel:"noopener"},"Ver produto no marketplace")):null,
           q.details?h("p",{style:"margin:1rem 0 0;white-space:pre-wrap"},q.details):null]),
         h("div",{class:"grid",style:"margin-bottom:16px"},[
           h("div",{class:"card"},[h("h3",null,"Fornecedor"),dl([["Empresa",h("a",{href:"/admin#/"+s.reference},s.company_name)],["Contato",s.contact_name],["E-mail",s.email],["Celular",s.mobile]])]),
-          h("div",{class:"card"},[h("h3",null,"Comprador (interno)"),dl([["Empresa",b.company_name],["Contato",b.contact_name],["E-mail",b.email],["Telefone",b.phone],["Cidade",[b.city,b.state].filter(Boolean).join("/")]])])
+          h("div",{class:"card"},[h("h3",null,"Comprador (interno)"),dl([["Empresa",b.company_name],["CNPJ",b.cnpj],["Contato",b.contact_name],["E-mail",b.email],["Telefone",b.phone],["Cidade",[b.city,b.state].filter(Boolean).join("/")],["Segmento",b.segment]])])
         ]),
         quotes
       ]),
-      h("div",{class:"card"},[h("h3",null,"Chat"),chatBox(q)])
+      (function(){chan=RfqChat.mount({sb:sb,rfq:q,me:"team",lang:"pt",pickRole:true,onError:fail});return h("div",{class:"card"},[h("h3",null,"Chat"),chan.el]);})()
     ]));
-  }
-
-  function chatBox(q){
-    var list=h("div",{class:"msgs","aria-live":"polite"}),seen={};
-    var as=sel("as",[["buyer","Como comprador"],["team","Como equipe India Brazil"]],"team");
-    var ta=h("textarea",{maxlength:"4000",placeholder:"Mensagem (em inglês)…","aria-label":"Mensagem"});
-    var btn=h("button",{class:"btn",type:"submit"},"Enviar");
-    var form=h("form",{class:"send"},[as,ta,btn]);
-    var ROLE={supplier:"Fornecedor",buyer:"Comprador",team:"Equipe India Brazil"};
-    function add(m){
-      if(seen[m.id])return;seen[m.id]=1;
-      var e=list.querySelector("p.muted");if(e)e.remove();
-      list.appendChild(h("div",{class:"msg"+(m.sender_role!=="supplier"?" mine":"")},[h("span",{class:"who"},ROLE[m.sender_role]+(m.sender_name?" – "+m.sender_name:"")+" · "+when(m.created_at)),m.body]));
-      list.scrollTop=list.scrollHeight;
-    }
-    sb.from("rfq_messages").select("*").eq("rfq_id",q.id).order("created_at").then(function(r){
-      if(r.error)return fail(r.error);
-      if(!r.data.length)list.appendChild(h("p",{class:"muted",style:"text-align:center"},"Nenhuma mensagem ainda."));
-      r.data.forEach(add);
-    });
-    chan=sb.channel("adm-rfq-"+q.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"rfq_messages",filter:"rfq_id=eq."+q.id},function(pl){add(pl.new);}).subscribe();
-    form.addEventListener("submit",async function(ev){
-      ev.preventDefault();var body=ta.value.trim();if(!body)return;btn.disabled=true;
-      var r=await sb.from("rfq_messages").insert({rfq_id:q.id,sender_role:as.value,sender_name:as.value==="buyer"?q.buyer_label:"India Brazil team",body:body}).select().single();
-      btn.disabled=false;
-      if(r.error)return fail(r.error);
-      ta.value="";add(r.data);
-    });
-    ta.addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();form.requestSubmit();}});
-    return h("div",{class:"chat"},[list,form]);
   }
 
   start().catch(fail);

@@ -295,7 +295,28 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
     d.appendChild(h("div",{class:"card",style:"margin-bottom:16px"},h("div",{class:"ai"},[
       h("b",null,"Resumo com IA"),jobPill(job),h("span",{class:"muted",style:"flex:1 1 260px"},msg),aiButton(s,job,again)
     ])));
+    if(m.data)d.appendChild(await marketCard(s,again));
     if(m.data)d.appendChild(summaryView(s,m.data));
+  }
+  // --- Marketplace: publica os produtos do resumo na vitrine pública (/marketplace) ---
+  async function marketCard(s,again){
+    var c=await sb.from("products").select("id",{count:"exact",head:true}).eq("supplier_id",s.id).eq("published",true);
+    var live=c.count||0;
+    async function run(fn,label){
+      if(!confirm(label))return;
+      var r=await sb.rpc(fn,{p_supplier:s.id});
+      if(r.error)return fail(r.error);
+      var row=all.find(function(x){return x.id===s.id;});if(row)row.status=fn==="publish_catalogue"?"published":"verified";
+      again();
+    }
+    return h("div",{class:"card",style:"margin-bottom:16px"},h("div",{class:"ai"},[
+      h("b",null,"Marketplace"),
+      live?h("span",{class:"pill ok"},live+" produtos no ar"):h("span",{class:"pill"},"Fora do ar"),
+      h("span",{class:"muted",style:"flex:1 1 260px"},live?"Os produtos do resumo estão na vitrine. Publicar de novo atualiza com o resumo atual.":"Publica os produtos do resumo na vitrine pública, com fotos, variações e medidas."),
+      h("a",{class:"btn btn-sm btn-ghost",href:"/marketplace#/fornecedor/"+s.id,target:"_blank",rel:"noopener",hidden:live?null:"hidden"},"Ver vitrine"),
+      live?h("button",{class:"btn btn-sm btn-ghost",type:"button",onclick:function(){run("unpublish_catalogue","Tirar os produtos deste fornecedor do marketplace?");}},"Tirar do ar"):null,
+      h("button",{class:"btn btn-sm btn-ai",type:"button",onclick:function(){run("publish_catalogue",live?"Atualizar a vitrine com o resumo atual?":"Publicar os produtos deste fornecedor no marketplace?");}},live?"Atualizar vitrine":"Publicar no marketplace")
+    ]));
   }
   function dl(pairs){return h("dl",null,pairs.reduce(function(a,p){a.push(h("dt",null,p[0]),h("dd",null,p[1]&&p[1].nodeType?p[1]:txt(p[1])));return a;},[]));}
 

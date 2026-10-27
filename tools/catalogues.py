@@ -12,6 +12,7 @@ Comandos:
     python3 tools/catalogues.py render IB-XXX    # PDFs -> páginas em JPG + texto (para ler)
     python3 tools/catalogues.py queue            # pedidos do botão "Processar com IA" do /admin
     python3 tools/catalogues.py job IB-XXX processing|error ["mensagem"]
+    python3 tools/catalogues.py images IB-XXX    # fotos dos produtos (página do catálogo) -> marketplace
 """
 import datetime
 import json
@@ -52,12 +53,11 @@ def env():
 URL, KEY = None, None
 
 
-def call(method, path, body=None, headers=None, raw=False):
+def call(method, path, body=None, headers=None, raw=False, data=None):
     h = {"apikey": KEY}
     if KEY.startswith("eyJ"):  # chave service_role antiga (JWT)
         h["Authorization"] = "Bearer " + KEY
     h.update(headers or {})
-    data = None
     if body is not None:
         data = json.dumps(body).encode()
         h["Content-Type"] = "application/json"
@@ -220,6 +220,58 @@ def cmd_render(ref):
         print("%s: %s -> %s (páginas pNNN.jpg + text.txt)" % (f, out.stdout.strip(), os.path.relpath(dest, ROOT)))
 
 
+def cmd_images(ref):
+    """Envia a foto de cada produto para o bucket público product-images e grava o caminho em
+    products[].image no resumo salvo. A foto é a página do catálogo indicada em source ("p. N"),
+    renderizada em alta resolução e recortada por image_crop = [x, y, largura, altura] em frações
+    da página (no produto ou no resumo inteiro); sem image_crop, vai a página inteira."""
+    row = call("GET", "/rest/v1/catalogue_summaries?reference=eq." + urllib.parse.quote(ref) + "&select=summary")
+    if not row:
+        sys.exit("Sem resumo salvo para " + ref)
+    summary = row[0]["summary"]
+    folder = os.path.join(OUT, ref)
+    pdfs = [f for f in sorted(os.listdir(folder)) if f.lower().endswith(".pdf")] if os.path.isdir(folder) else []
+    if not pdfs:
+        sys.exit("Rode antes: python3 tools/catalogues.py download " + ref)
+    out = os.path.join(folder, "marketplace")
+    os.makedirs(out, exist_ok=True)
+    sent, done = 0, {}
+    for prod in summary.get("products", []):
+        m = re.search(r"(\d+)", prod.get("source") or "")
+        if not m:
+            continue
+        pdf = prod.get("source_file") or pdfs[0]
+        hd = os.path.join(folder, "pages-hd-" + pdf[:-4])
+        if not os.path.isdir(hd):
+            os.makedirs(hd)
+            subprocess.run(["osascript", "-l", "JavaScript", os.path.join(ROOT, "tools", "pdf2png.js"),
+                            os.path.join(folder, pdf), hd, "2000"], capture_output=True, check=True)
+        page = os.path.join(hd, "p%03d.jpg" % int(m.group(1)))
+        if not os.path.exists(page):
+            continue
+        crop = prod.get("image_crop") or summary.get("image_crop")
+        name = "%s-p%03d%s.jpg" % (pdf[:-4][:40], int(m.group(1)), "-c" if crop else "")
+        local = os.path.join(out, re.sub(r"[^\w.\-]+", "_", name))
+        if crop:
+            dims = subprocess.run(["sips", "-g", "pixelWidth", "-g", "pixelHeight", page], capture_output=True, text=True).stdout
+            w, h = [int(x) for x in re.findall(r"pixel(?:Width|Height): (\d+)", dims)]
+            x, y, cw, ch = crop
+            subprocess.run(["sips", "-c", str(int(ch * h)), str(int(cw * w)), "--cropOffset", str(int(y * h)), str(int(x * w)),
+                            page, "--out", local], capture_output=True, check=True)
+        else:
+            subprocess.run(["sips", "-s", "formatOptions", "80", page, "--out", local], capture_output=True, check=True)
+        dest = "%s/%s" % (ref, os.path.basename(local))
+        if dest not in done:
+            call("POST", "/storage/v1/object/product-images/" + urllib.parse.quote(dest),
+                 headers={"Content-Type": "image/jpeg", "x-upsert": "true"}, data=open(local, "rb").read())
+            done[dest] = 1
+            sent += 1
+        prod["image"] = dest
+    call("PATCH", "/rest/v1/catalogue_summaries?reference=eq." + urllib.parse.quote(ref),
+         {"summary": summary, "updated_at": utcnow()}, {"Prefer": "return=minimal"})
+    print("%s: %d imagens enviadas, %d produtos com foto" % (ref, sent, sum(1 for p in summary.get("products", []) if p.get("image"))))
+
+
 def cmd_save(ref, path):
     s = supplier(ref)
     summary = json.load(open(path, encoding="utf-8"))
@@ -243,6 +295,8 @@ if __name__ == "__main__":
         cmd_save(a[1], a[2])
     elif a[:1] == ["render"] and len(a) == 2:
         cmd_render(a[1])
+    elif a[:1] == ["images"] and len(a) == 2:
+        cmd_images(a[1])
     elif a[:1] == ["queue"]:
         cmd_queue()
     elif a[:1] == ["job"] and len(a) in (3, 4):

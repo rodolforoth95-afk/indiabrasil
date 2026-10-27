@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<!--
+  Área do comprador brasileiro – India Brasil (/comprador)
+  Conta com e-mail e senha, perfil da empresa, pedido de orçamento de um produto do marketplace
+  e conversa B2B com o fornecedor (anexos, cotações). A India Brasil acompanha todas as conversas.
+  Regras de acesso no banco: docs/marketplace-setup.sql.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Minha conta | India Brasil</title>
+<link rel="icon" href="/assets/logo/india-brazil-icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="/assets/js/rfq-chat.js"></script>
+<style>
+:root{
+  --navy:#0F1A3D; --navy-2:#1A2A5E; --green:#0B7A55; --orange:#FF9100;
+  --ink:#151A2D; --muted:#5A6178; --line:#DCE0E8; --page:#F5F7FA; --surface:#FFFFFF; --field:#FFFFFF;
+  --chip:#EEF1F6; --error:#B42318; --focus:#2F6FED; --mine:#E7F4EE; --img:#F0F2F6;
+  color-scheme:light; box-sizing:border-box;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ink:#ECEEF5; --muted:#A8AFC4; --line:#2B3250; --page:#0C1124; --surface:#151B33; --field:#1B2240; --chip:#232B4A;
+  --green:#2FB283; --error:#FF8A80; --focus:#7FA6FF; --mine:#173A31; --img:#1B2240; color-scheme:dark;}}
+:root[data-theme="dark"]{--ink:#ECEEF5; --muted:#A8AFC4; --line:#2B3250; --page:#0C1124; --surface:#151B33; --field:#1B2240; --chip:#232B4A;
+  --green:#2FB283; --error:#FF8A80; --focus:#7FA6FF; --mine:#173A31; --img:#1B2240; color-scheme:dark;}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;min-height:100vh;background:var(--page);color:var(--ink);font-family:"IBM Plex Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;font-size:15px}
+h1,h2,h3{line-height:1.2;margin:0 0 .5em;letter-spacing:-.01em}
+a{color:var(--green)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:4px}
+[hidden]{display:none!important}
+header{background:var(--navy);color:#fff}
+header .in{max-width:1240px;margin:0 auto;padding:0 16px;height:62px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+header img{height:34px;width:auto;display:block}
+header nav{display:flex;align-items:center;gap:14px;font-size:.9rem;min-width:0}
+header nav a{color:#E5E9F5;text-decoration:none;white-space:nowrap}
+header nav a:hover{color:#fff;text-decoration:underline}
+header nav #who{display:flex;align-items:center;gap:14px}
+main{max-width:1240px;margin:0 auto;padding:22px 16px 64px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}
+.btn{font:inherit;font-weight:600;border-radius:8px;padding:.6rem 1.1rem;border:1.5px solid transparent;cursor:pointer;background:var(--green);color:#fff;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:.4rem;white-space:nowrap}
+.btn:hover{filter:brightness(1.08)}
+.btn[disabled]{opacity:.55;cursor:default;filter:none}
+.btn-orange{background:var(--orange);color:#0F1A3D}
+.btn-ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+header .btn-ghost{color:#fff;border-color:rgba(255,255,255,.3);padding:.3rem .75rem;font-size:.85rem}
+.btn-sm{padding:.3rem .7rem;font-size:.85rem}
+.link{background:none;border:0;padding:0;font:inherit;color:var(--green);cursor:pointer;text-decoration:underline}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:8px;padding:.6rem .75rem;width:100%}
+textarea{resize:vertical;min-height:6rem}
+input:focus,select:focus,textarea:focus{border-color:var(--focus);outline:none;box-shadow:0 0 0 3px rgba(47,111,237,.18)}
+label{display:block;font-weight:500;margin-bottom:.3rem}
+.field{margin-bottom:1rem}
+.hint{font-size:.85rem;color:var(--muted);margin:.3rem 0 0}
+.muted{color:var(--muted)}
+.err{color:var(--error);font-size:.9rem;margin:.6rem 0 0}
+.ok{color:var(--green);font-size:.9rem;margin:.6rem 0 0}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em}
+.auth{max-width:440px;margin:5vh auto 0}
+.auth .btn{width:100%;margin-top:.3rem}
+.auth .alt{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-top:1rem;font-size:.92rem}
+.note{background:var(--chip);border-radius:10px;padding:.7rem .9rem;font-size:.92rem;margin-bottom:1rem}
+.form2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 14px}
+.form2 .full{grid-column:1/-1}
+.pill{display:inline-block;font-size:.76rem;font-weight:600;padding:.1rem .5rem;border-radius:99px;background:var(--chip);color:var(--muted);white-space:nowrap}
+.pill.good{background:rgba(11,122,85,.12);color:var(--green)}
+.pill.warn{background:rgba(255,145,0,.15);color:#B45F00}
+.pill.bad{background:rgba(180,35,24,.12);color:var(--error)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pill.warn{color:var(--orange)}}
+
+/* Pedido de orçamento */
+.req{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
+@media (max-width:820px){.req{grid-template-columns:1fr}}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.pcard .ph{aspect-ratio:3/4;background:var(--img)}
+.pcard .ph img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
+.pcard .bd{padding:12px 14px}
+
+/* Mensageiro */
+.msgr{display:grid;grid-template-columns:330px 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.msgr{grid-template-columns:1fr}.msgr.open .threads{display:none}.msgr:not(.open) .conv{display:none}}
+.threads{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.threads h2{font-size:1rem;margin:0;padding:14px 16px;border-bottom:1px solid var(--line)}
+.thread{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink)}
+.thread:hover{background:var(--chip)}
+.thread[aria-current]{background:var(--chip);box-shadow:inset 3px 0 0 var(--orange)}
+.thread .th{flex:none;width:46px;height:58px;border-radius:6px;background:var(--img);overflow:hidden}
+.thread .th img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.thread .tx{min-width:0;flex:1}
+.thread .nm{font-weight:600;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thread .mt{font-size:.8rem;color:var(--muted);display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;margin-top:2px}
+.conv{display:grid;grid-template-columns:1fr 290px;gap:16px;align-items:start}
+@media (max-width:1180px){.conv{grid-template-columns:1fr}}
+.ctx .card{margin-bottom:14px;padding:16px}
+.ctx h3{font-size:.98rem}
+dl{display:grid;grid-template-columns:max-content 1fr;gap:.3rem .9rem;margin:0;font-size:.92rem}
+dt{color:var(--muted)}
+dd{margin:0;overflow-wrap:anywhere}
+.quote{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;font-size:.92rem}
+.quote b{font-size:1.05rem}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.back{margin-bottom:10px}
+</style>
+</head>
+<body>
+<header><div class="in">
+  <a href="/marketplace"><img src="/assets/logo/india-brazil-logo-white.svg" alt="India Brasil"></a>
+  <nav><a href="/marketplace">Marketplace</a><span id="who" hidden><a href="#/">Meus orçamentos</a> <a href="#/perfil">Empresa</a> <button class="btn btn-ghost" id="logout" type="button">Sair</button></span></nav>
+</div></header>
+
+<main>
+  <form class="card auth" id="vSignin" hidden>
+    <h1>Entrar</h1>
+    <p class="note" id="siNote" hidden>Para pedir orçamento, entre ou crie sua conta grátis. Leva menos de 1 minuto.</p>
+    <div class="field"><label for="siEmail">E-mail</label><input id="siEmail" type="email" autocomplete="username" required></div>
+    <div class="field"><label for="siPass">Senha</label><input id="siPass" type="password" autocomplete="current-password" required></div>
+    <button class="btn" type="submit">Entrar</button>
+    <p class="err" role="alert"></p>
+    <div class="alt"><button class="link" type="button" data-go="vSignup">Criar conta grátis</button><button class="link" type="button" data-go="vForgot">Esqueci minha senha</button></div>
+  </form>
+
+  <form class="card auth" id="vSignup" hidden>
+    <h1>Criar conta de comprador</h1>
+    <p class="muted">Para empresas brasileiras que querem comprar de fornecedores indianos.</p>
+    <div class="field"><label for="suEmail">E-mail da empresa</label><input id="suEmail" type="email" autocomplete="username" required></div>
+    <div class="field"><label for="suPass">Senha</label><input id="suPass" type="password" autocomplete="new-password" minlength="10" required><p class="hint">Pelo menos 10 caracteres.</p></div>
+    <div class="field"><label for="suPass2">Confirme a senha</label><input id="suPass2" type="password" autocomplete="new-password" required></div>
+    <button class="btn" type="submit">Criar conta</button>
+    <p class="err" role="alert"></p><p class="ok" role="status"></p>
+    <div class="alt"><button class="link" type="button" data-go="vSignin">Já tenho conta</button></div>
+  </form>
+
+  <form class="card auth" id="vForgot" hidden>
+    <h1>Recuperar senha</h1>
+    <p class="muted">Enviaremos um link para você criar uma nova senha.</p>
+    <div class="field"><label for="fgEmail">E-mail</label><input id="fgEmail" type="email" autocomplete="username" required></div>
+    <button class="btn" type="submit">Enviar link</button>
+    <p class="err" role="alert"></p><p class="ok" role="status"></p>
+    <div class="alt"><button class="link" type="button" data-go="vSignin">Voltar</button></div>
+  </form>
+
+  <form class="card auth" id="vNewpass" hidden>
+    <h1>Nova senha</h1>
+    <div class="field"><label for="npPass">Nova senha</label><input id="npPass" type="password" autocomplete="new-password" minlength="10" required><p class="hint">Pelo menos 10 caracteres.</p></div>
+    <div class="field"><label for="npPass2">Confirme a nova senha</label><input id="npPass2" type="password" autocomplete="new-password" required></div>
+    <button class="btn" type="submit">Salvar nova senha</button>
+    <p class="err" role="alert"></p>
+  </form>
+
+  <section id="vApp" hidden></section>
+  <p class="err" id="appErr" role="alert"></p>
+</main>
+
+<script>
+(function(){
+  var SUPABASE_URL="https://fwlgkmtttaelntnibifd.supabase.co";
+  var SUPABASE_ANON_KEY="sb_publishable_rOCe8m9bS5WTyUhS59fsQA_FEoMGE4C"; // publishable: só funciona com as regras do banco
+  var IMG=SUPABASE_URL+"/storage/v1/object/public/product-images/";
+  var STATUS={open:["Aguardando cotação","warn"],quoted:["Cotação recebida","good"],negotiating:["Em negociação","warn"],won:["Pedido fechado","good"],lost:["Não seguiu","bad"],closed:["Encerrado",""]};
+  var SEG=["Varejo / loja","Atacado / distribuidor","Indústria","Importador / trading","E-commerce","Outro"];
+  var UF="AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ");
+  var CUR=["USD","BRL","INR","EUR"], INCO=["FOB","CIF","CFR","EXW","FCA","DAP","DDP"];
+
+  // Sessão própria do comprador (não mistura com o portal do fornecedor nem com o /admin)
+  var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{storageKey:"ib-buyer-auth"}});
+  var $=function(id){return document.getElementById(id);};
+  var VIEWS=["vSignin","vSignup","vForgot","vNewpass","vApp"];
+  var recovering=/type=recovery/.test(location.hash), me=null, buyer=null, chat=null;
+
+  function h(tag,attrs,kids){
+    var e=document.createElement(tag);
+    Object.keys(attrs||{}).forEach(function(k){
+      if(k==="class")e.className=attrs[k];else if(k.slice(0,2)==="on")e.addEventListener(k.slice(2),attrs[k]);else if(attrs[k]!=null&&attrs[k]!==false)e.setAttribute(k,attrs[k]===true?"":attrs[k]);
+    });
+    [].concat(kids==null?[]:kids).forEach(function(c){if(c==null||c===false)return;e.appendChild(typeof c==="object"?c:document.createTextNode(String(c)));});
+    return e;
+  }
+  function txt(v){return v==null||v===""?"–":String(v);}
+  function date(v){if(/^\d{4}-\d{2}-\d{2}$/.test(v||""))v+="T00:00:00";return v?new Date(v).toLocaleDateString("pt-BR"):"–";}
+  function money(v,cur){try{return new Intl.NumberFormat("pt-BR",{style:"currency",currency:cur||"USD",maximumFractionDigits:4}).format(v);}catch(e){return v+" "+(cur||"");}}
+  function pill(k){var p=STATUS[k]||[k,""];return h("span",{class:"pill "+p[1]},p[0]);}
+  function dl(pairs){return h("dl",null,pairs.filter(function(p){return p[1]!=null&&p[1]!=="";}).reduce(function(a,p){a.push(h("dt",null,p[0]),h("dd",null,p[1].nodeType?p[1]:String(p[1])));return a;},[]));}
+  function one(v){return Array.isArray(v)?v[0]||null:v||null;}
+  function fail(e){console.error(e);$("appErr").textContent="Algo deu errado: "+((e&&e.message)||e);}
+  function show(id){VIEWS.forEach(function(v){$(v).hidden=v!==id;});$("appErr").textContent="";}
+  function msg(f,err,ok){f.querySelector(".err").textContent=err||"";var o=f.querySelector(".ok");if(o)o.textContent=ok||"";}
+  function busy(f,on){Array.prototype.forEach.call(f.querySelectorAll("button"),function(b){b.disabled=on;});}
+  function sel(id,opts,val){var s=h("select",{id:id});opts.forEach(function(o){s.appendChild(h("option",{value:o},o));});if(val!=null)s.value=val;return s;}
+  function fld(label,input,cls){return h("div",{class:"field"+(cls?" "+cls:"")},[h("label",{for:input.id},label),input]);}
+  function here(){return location.origin+"/comprador"+(recovering?"":location.hash);}
+
+  document.querySelectorAll("[data-go]").forEach(function(b){b.addEventListener("click",function(){show(b.dataset.go);});});
+
+  // --- Acesso ---
+  $("vSignin").addEventListener("submit",async function(ev){
+    ev.preventDefault();var f=this;msg(f);busy(f,true);
+    var r=await sb.auth.signInWithPassword({email:$("siEmail").value.trim(),password:$("siPass").value});
+    busy(f,false);
+    if(r.error)return msg(f,r.error.code==="email_not_confirmed"?"Confirme seu e-mail primeiro: abra o link que enviamos.":r.error.code==="invalid_credentials"?"E-mail ou senha incorretos.":r.error.message);
+    $("siPass").value="";route();
+  });
+  $("vSignup").addEventListener("submit",async function(ev){
+    ev.preventDefault();var f=this;msg(f);
+    if($("suPass").value.length<10)return msg(f,"A senha precisa ter pelo menos 10 caracteres.");
+    if($("suPass").value!==$("suPass2").value)return msg(f,"As senhas não são iguais.");
+    busy(f,true);
+    var r=await sb.auth.signUp({email:$("suEmail").value.trim().toLowerCase(),password:$("suPass").value,options:{emailRedirectTo:here()}});
+    busy(f,false);
+    if(r.error)return msg(f,r.error.message);
+    $("suPass").value=$("suPass2").value="";
+    msg(f,"","Quase lá! Enviamos um link de confirmação para o seu e-mail. Abra o link para ativar a conta e depois entre.");
+  });
+  $("vForgot").addEventListener("submit",async function(ev){
+    ev.preventDefault();var f=this;msg(f);busy(f,true);
+    var r=await sb.auth.resetPasswordForEmail($("fgEmail").value.trim(),{redirectTo:location.origin+"/comprador"});
+    busy(f,false);
+    if(r.error)return msg(f,r.error.message);
+    msg(f,"","Se existir uma conta com esse e-mail, o link já está a caminho. Veja também o spam.");
+  });
+  $("vNewpass").addEventListener("submit",async function(ev){
+    ev.preventDefault();var f=this;msg(f);
+    if($("npPass").value.length<10)return msg(f,"A senha precisa ter pelo menos 10 caracteres.");
+    if($("npPass").value!==$("npPass2").value)return msg(f,"As senhas não são iguais.");
+    busy(f,true);var r=await sb.auth.updateUser({password:$("npPass").value});busy(f,false);
+    if(r.error)return msg(f,r.error.message);
+    recovering=false;history.replaceState(null,"",location.pathname);route();
+  });
+  $("logout").addEventListener("click",async function(){stopChat();await sb.auth.signOut();buyer=null;location.hash="";route();});
+  sb.auth.onAuthStateChange(function(ev){if(ev==="PASSWORD_RECOVERY"){recovering=true;setTimeout(route,0);}});
+
+  async function route(){
+    stopChat();
+    var s=(await sb.auth.getSession()).data.session;
+    if(!s){$("who").hidden=true;$("siNote").hidden=!/^#\/novo\//.test(location.hash);show("vSignin");return;}
+    if(recovering)return show("vNewpass");
+    me=s.user;$("who").hidden=false;
+    if(!buyer){
+      var b=await sb.from("buyers").select("*").eq("user_id",me.id).maybeSingle();
+      if(b.error)return fail(b.error);
+      buyer=b.data;
+    }
+    var v=$("vApp");v.textContent="";show("vApp");
+    if(!buyer||/^#\/perfil/.test(location.hash))return profile(v).catch(fail);
+    var m;
+    if((m=location.hash.match(/^#\/novo\/(.+)$/)))return newRequest(v,m[1]).catch(fail);
+    if((m=location.hash.match(/^#\/pedido\/(.+)$/)))return messenger(v,m[1]).catch(fail);
+    messenger(v,null).catch(fail);
+  }
+  window.addEventListener("hashchange",function(){if(!recovering)route();});
+  function stopChat(){if(chat){chat.stop();chat=null;}}
+
+  // --- Perfil da empresa (obrigatório antes do primeiro pedido) ---
+  async function profile(v){
+    var b=buyer||{};
+    var f=h("form",{class:"card form2"},[
+      h("div",{class:"full"},[h("h1",{style:"font-size:1.35rem"},buyer?"Dados da empresa":"Complete os dados da sua empresa"),
+        h("p",{class:"muted"},"Usamos estes dados para qualificar o seu pedido. O fornecedor não vê seu nome nem seus contatos: ele vê apenas “comprador de <cidade>/<UF>”. A India Brasil faz a intermediação.")]),
+      fld("Empresa *",h("input",{id:"pCompany",required:true,value:b.company_name||""})),
+      fld("CNPJ",h("input",{id:"pCnpj",inputmode:"numeric",value:b.cnpj||"",placeholder:"00.000.000/0000-00"})),
+      fld("Seu nome *",h("input",{id:"pName",required:true,value:b.contact_name||""})),
+      fld("Telefone / WhatsApp *",h("input",{id:"pPhone",type:"tel",required:true,value:b.phone||"",placeholder:"(11) 99999-9999"})),
+      fld("Cidade *",h("input",{id:"pCity",required:true,value:b.city||""})),
+      fld("UF *",sel("pState",[""].concat(UF),b.state||"")),
+      fld("Segmento",sel("pSeg",[""].concat(SEG),b.segment||"")),
+      h("div",{class:"full"},[h("button",{class:"btn",type:"submit"},buyer?"Salvar":"Salvar e continuar"),h("p",{class:"err",role:"alert"}),h("p",{class:"ok",role:"status"})])
+    ]);
+    f.addEventListener("submit",async function(ev){
+      ev.preventDefault();msg(f);
+      var val=function(id){return f.querySelector("#"+id).value.trim();};
+      if(!val("pState"))return msg(f,"Escolha a UF.");
+      var row={company_name:val("pCompany"),cnpj:val("pCnpj")||null,contact_name:val("pName"),phone:val("pPhone"),city:val("pCity"),state:val("pState"),segment:val("pSeg")||null,email:me.email};
+      busy(f,true);
+      var r=buyer?await sb.from("buyers").update(row).eq("id",buyer.id).select().single():await sb.from("buyers").insert(Object.assign({user_id:me.id},row)).select().single();
+      busy(f,false);
+      if(r.error)return msg(f,r.error.message);
+      var first=!buyer;buyer=r.data;
+      if(/^#\/perfil/.test(location.hash))location.hash="#/";else if(first)route();else msg(f,"","Dados salvos.");
+    });
+    v.appendChild(h("div",{style:"max-width:760px;margin:0 auto"},f));
+  }
+
+  // --- Novo pedido de orçamento a partir de um produto ---
+  async function newRequest(v,productId){
+    var r=await sb.from("products").select("*").eq("id",productId).eq("published",true).maybeSingle();
+    if(r.error)throw r.error;
+    if(!r.data){v.appendChild(h("div",{class:"card empty"},["Produto não encontrado. ",h("a",{href:"/marketplace"},"Voltar ao marketplace")]));return;}
+    var p=r.data,specs=p.specs||{};
+    var f=h("form",{class:"card form2"},[
+      h("div",{class:"full"},[h("h1",{style:"font-size:1.35rem"},"Solicitar orçamento"),h("p",{class:"muted"},"Quanto mais detalhes, mais rápida e precisa a cotação. Depois de enviar, você conversa com o fornecedor e pode anexar arquivos.")]),
+      fld("Quantidade *",h("input",{id:"rQty",type:"number",min:"1",step:"any",required:true})),
+      fld("Unidade",h("input",{id:"rUnit",value:p.price_unit||"peças"})),
+      fld("Preço-alvo por unidade (opcional)",h("input",{id:"rTarget",type:"number",min:"0",step:"any"})),
+      fld("Moeda",sel("rCur",CUR,p.currency&&CUR.indexOf(p.currency)>-1?p.currency:"USD")),
+      fld("Incoterm",sel("rInco",INCO,"FOB")),
+      fld("Destino (cidade ou porto) *",h("input",{id:"rDest",required:true,value:buyer.city?buyer.city+"/"+buyer.state:"",placeholder:"Ex.: Santos/SP"})),
+      fld("Preciso até",h("input",{id:"rNeed",type:"date"})),
+      h("div",{class:"field full"},[h("label",{for:"rDetails"},"Detalhes do pedido *"),h("textarea",{id:"rDetails",required:true,placeholder:"Cores, tamanhos, quantidades por variação, embalagem, etiqueta/marca própria, certificações exigidas…"})]),
+      h("div",{class:"full"},[h("button",{class:"btn btn-orange",type:"submit"},"Enviar pedido de orçamento"),h("p",{class:"err",role:"alert"})])
+    ]);
+    f.addEventListener("submit",async function(ev){
+      ev.preventDefault();msg(f);
+      var val=function(id){return f.querySelector("#"+id).value.trim();},num=function(id){return val(id)===""?null:+val(id);};
+      busy(f,true);
+      var ins=await sb.from("rfqs").insert({supplier_id:p.supplier_id,buyer_id:buyer.id,product_id:p.id,buyer_label:"Buyer",
+        product:p.name+(p.code?" ("+p.code+")":""),details:val("rDetails"),quantity:num("rQty"),unit:val("rUnit")||null,
+        target_price:num("rTarget"),currency:val("rCur"),incoterm:val("rInco"),destination:val("rDest"),needed_by:val("rNeed")||null}).select("id").single();
+      busy(f,false);
+      if(ins.error)return msg(f,"Não foi possível enviar: "+ins.error.message);
+      location.hash="#/pedido/"+ins.data.id;
+    });
+    v.appendChild(h("div",{class:"req"},[
+      h("div",{class:"pcard"},[h("div",{class:"ph"},p.image_path?h("img",{src:IMG+p.image_path,alt:p.name}):null),
+        h("div",{class:"bd"},[h("b",null,p.name),h("div",{class:"muted",style:"font-size:.88rem;margin-top:.3rem"},[p.code?"Código "+p.code+" · ":"","Fornecedor "+p.reference]),
+          specs.Tamanhos?h("div",{class:"muted",style:"font-size:.88rem"},"Tamanhos: "+specs.Tamanhos):null,
+          h("a",{href:"/marketplace#/produto/"+p.id,style:"font-size:.88rem"},"Ver produto")])]),
+      f
+    ]));
+  }
+
+  // --- Mensageiro: lista de pedidos + conversa ---
+  async function messenger(v,openId){
+    var r=await sb.from("rfqs").select("id,code,created_at,updated_at,product,status,product_id,products(image_path,reference)").eq("buyer_id",buyer.id).order("created_at",{ascending:false});
+    if(r.error)throw r.error;
+    var list=h("div",{class:"threads"},h("h2",null,"Meus pedidos de orçamento"));
+    if(!r.data.length)list.appendChild(h("div",{class:"empty"},[h("p",null,"Você ainda não pediu orçamentos."),h("a",{class:"btn btn-orange",href:"/marketplace"},"Buscar produtos")]));
+    r.data.forEach(function(q){
+      var pr=one(q.products)||{};
+      list.appendChild(h("a",{class:"thread",href:"#/pedido/"+q.id,"aria-current":q.id===openId?"true":null},[
+        h("div",{class:"th"},pr.image_path?h("img",{src:IMG+pr.image_path,alt:""}):null),
+        h("div",{class:"tx"},[h("div",{class:"nm"},q.product),h("div",{class:"mt"},[h("span",{class:"mono"},q.code),pill(q.status)]),h("div",{class:"mt"},date(q.created_at))])
+      ]));
+    });
+    var conv=h("div",{class:"conv"});
+    var box=h("div",{class:"msgr"+(openId?" open":"")},[list,conv]);
+    v.appendChild(box);
+    if(!openId){
+      if(r.data.length&&window.innerWidth>900)return location.replace("#/pedido/"+r.data[0].id);
+      conv.appendChild(h("div",{class:"card empty"},"Escolha um pedido para ver a conversa."));return;
+    }
+    var q=await sb.from("rfqs").select("*,products(id,image_path,reference,name,code)").eq("id",openId).maybeSingle();
+    if(q.error)throw q.error;
+    if(!q.data){conv.appendChild(h("div",{class:"card empty"},"Pedido não encontrado."));return;}
+    q=q.data;var pr=one(q.products)||{};
+    var qs=await sb.from("rfq_quotes").select("*").eq("rfq_id",q.id).order("created_at",{ascending:false});
+    if(qs.error)throw qs.error;
+
+    chat=RfqChat.mount({sb:sb,rfq:q,me:"buyer",lang:"pt",supplierLabel:"Fornecedor "+(pr.reference||""),onError:fail});
+    var quotes=h("div",{class:"card"},h("h3",null,"Cotações ("+qs.data.length+")"));
+    if(!qs.data.length)quotes.appendChild(h("p",{class:"muted",style:"margin:0"},"O fornecedor ainda não enviou cotação. Você será avisado aqui."));
+    qs.data.forEach(function(x){quotes.appendChild(h("div",{class:"quote"},[
+      h("div",null,[h("b",null,money(x.unit_price,x.currency)),q.unit?" / "+q.unit:""," · ",x.incoterm||""]),
+      dl([["Pedido mínimo",x.moq],["Prazo",x.lead_time_days!=null?x.lead_time_days+" dias":null],["Validade",x.valid_until?date(x.valid_until):null],["Enviada",date(x.created_at)],["Observações",x.notes]])
+    ]));});
+    conv.appendChild(h("div",{class:"card"},[
+      h("a",{class:"btn btn-ghost btn-sm back",href:"#/"},"← Pedidos"),
+      h("div",{style:"display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:10px"},[
+        h("div",null,[h("div",{class:"muted mono"},q.code),h("h2",{style:"font-size:1.15rem;margin:0"},q.product)]),pill(q.status)]),
+      chat.el
+    ]));
+    conv.appendChild(h("div",{class:"ctx"},[
+      h("div",{class:"card"},[h("h3",null,"Seu pedido"),dl([["Quantidade",q.quantity!=null?q.quantity+" "+(q.unit||""):null],["Preço-alvo",q.target_price!=null?money(q.target_price,q.currency):null],
+        ["Incoterm",q.incoterm],["Destino",q.destination],["Preciso até",q.needed_by?date(q.needed_by):null],["Enviado",date(q.created_at)]]),
+        q.details?h("p",{style:"margin:.8rem 0 0;white-space:pre-wrap;font-size:.92rem"},q.details):null,
+        pr.id?h("a",{href:"/marketplace#/produto/"+pr.id,style:"display:inline-block;margin-top:.6rem;font-size:.9rem"},"Ver produto no marketplace"):null]),
+      quotes,
+      h("div",{class:"card"},[h("h3",null,"Intermediação India Brasil"),h("p",{class:"muted",style:"margin:0;font-size:.9rem"},"Nossa equipe acompanha esta conversa e ajuda com tradução, negociação e documentação. A plataforma não processa pagamentos.")])
+    ]));
+  }
+
+  route().catch(fail);
+})();
+</script>
+</body>
+</html>

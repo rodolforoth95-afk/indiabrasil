@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<!--
+  Marketplace B2B – India Brasil (/marketplace)
+  Vitrine pública dos produtos dos fornecedores indianos (tabela public.products, gerada a partir
+  do resumo do catálogo). O comprador busca, vê o produto e pede orçamento em /comprador.
+  Não há pagamento aqui: a plataforma só gera orçamentos e conecta comprador e fornecedor.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marketplace | India Brasil – produtos de fornecedores indianos</title>
+<meta name="description" content="Encontre fabricantes e exportadores indianos verificados e peça orçamentos sem custo. A India Brasil intermedia toda a negociação.">
+<link rel="icon" href="/assets/logo/india-brazil-icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --navy:#0F1A3D; --navy-2:#1A2A5E; --green:#0B7A55; --green-2:#00C853; --orange:#FF9100;
+  --ink:#151A2D; --muted:#5A6178; --line:#DCE0E8; --page:#F5F7FA; --surface:#FFFFFF; --field:#FFFFFF;
+  --chip:#EEF1F6; --error:#B42318; --focus:#2F6FED; --img:#F0F2F6;
+  color-scheme:light; box-sizing:border-box;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ink:#ECEEF5; --muted:#A8AFC4; --line:#2B3250; --page:#0C1124; --surface:#151B33; --field:#1B2240; --chip:#232B4A;
+  --green:#2FB283; --error:#FF8A80; --focus:#7FA6FF; --img:#1B2240; color-scheme:dark;}}
+:root[data-theme="dark"]{--ink:#ECEEF5; --muted:#A8AFC4; --line:#2B3250; --page:#0C1124; --surface:#151B33; --field:#1B2240; --chip:#232B4A;
+  --green:#2FB283; --error:#FF8A80; --focus:#7FA6FF; --img:#1B2240; color-scheme:dark;}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;min-height:100vh;background:var(--page);color:var(--ink);font-family:"IBM Plex Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;font-size:15px}
+h1,h2,h3{line-height:1.2;margin:0 0 .5em;letter-spacing:-.01em}
+a{color:var(--green)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:4px}
+[hidden]{display:none!important}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px}
+.muted{color:var(--muted)}
+.btn{font:inherit;font-weight:600;border-radius:8px;padding:.65rem 1.2rem;border:1.5px solid transparent;cursor:pointer;background:var(--orange);color:#0F1A3D;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:.4rem;white-space:nowrap}
+.btn:hover{filter:brightness(1.06)}
+.btn-green{background:var(--green);color:#fff}
+.btn-ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+
+/* Topo com busca */
+header{background:var(--navy);color:#fff;position:sticky;top:0;z-index:10}
+.bar{display:flex;align-items:center;gap:16px;height:68px}
+.bar img{height:34px;width:auto;display:block}
+.search{flex:1;display:flex;max-width:720px;background:#fff;border-radius:10px;overflow:hidden;border:2px solid var(--orange)}
+.search input{flex:1;min-width:0;border:0;padding:.65rem .9rem;font:inherit;color:#151A2D;background:#fff;outline:none}
+.search button{border:0;background:var(--orange);color:#0F1A3D;font:inherit;font-weight:700;padding:0 1.2rem;cursor:pointer}
+.links{display:flex;gap:14px;font-size:.9rem;white-space:nowrap}
+.links a{color:#E5E9F5;text-decoration:none}
+.links a:hover{color:#fff;text-decoration:underline}
+.sub{background:var(--navy-2);font-size:.88rem}
+.sub .wrap{display:flex;gap:18px;overflow-x:auto;padding-top:.5rem;padding-bottom:.5rem}
+.sub a{color:#C9D0E6;text-decoration:none;white-space:nowrap}
+.sub a:hover,.sub a[aria-current]{color:#fff}
+@media (max-width:760px){.bar{flex-wrap:wrap;height:auto;padding:10px 0}.search{order:3;flex-basis:100%;max-width:none}.links{margin-left:auto}.links .hide-sm{display:none}}
+
+main{padding:24px 0 64px}
+
+/* Início */
+.hero{background:linear-gradient(120deg,var(--navy) 0%,var(--navy-2) 60%,#23407A 100%);color:#fff;border-radius:16px;padding:36px 28px;margin-bottom:22px;display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:center}
+.hero h1{font-size:clamp(1.6rem,3.4vw,2.4rem);margin-bottom:.4em}
+.hero p{color:#C9D0E6;margin:0 0 1.2rem}
+.hero .search{max-width:none}
+.steps{display:grid;gap:10px}
+.steps div{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:12px 14px;font-size:.92rem}
+.steps b{color:var(--orange);margin-right:.35rem}
+@media (max-width:860px){.hero{grid-template-columns:1fr}}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
+.chip{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .85rem;border-radius:99px;background:var(--surface);border:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:.9rem}
+.chip:hover{border-color:var(--orange)}
+.chip span{color:var(--muted);font-size:.8rem}
+.sec{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;margin:8px 0 12px}
+.sec h2{font-size:1.25rem;margin:0}
+
+/* Grade de produtos */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;text-decoration:none;color:var(--ink);display:flex;flex-direction:column;transition:box-shadow .15s,border-color .15s}
+.card:hover{border-color:var(--orange);box-shadow:0 6px 18px rgba(15,26,61,.1)}
+.card .ph{aspect-ratio:3/4;background:var(--img);overflow:hidden}
+.card .ph img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
+.card .bd{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px;flex:1}
+.card .nm{font-size:.92rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em}
+.card .pr{font-weight:700;font-size:1.02rem}
+.card .pr.ask{font-weight:600;font-size:.9rem;color:var(--green)}
+.card .mq{font-size:.82rem;color:var(--muted)}
+.card .sp{margin-top:auto;padding-top:6px;border-top:1px solid var(--line);font-size:.8rem;color:var(--muted);display:flex;gap:.35rem;align-items:center;flex-wrap:wrap}
+.ver{display:inline-flex;align-items:center;gap:.25rem;color:var(--green);font-weight:600}
+.empty{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:36px;text-align:center;color:var(--muted)}
+
+/* Busca */
+.results{display:grid;grid-template-columns:240px 1fr;gap:20px;align-items:start}
+aside.filters{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;position:sticky;top:120px}
+aside h3{font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 .5rem}
+aside .opt{display:flex;justify-content:space-between;gap:.5rem;padding:.3rem 0;color:var(--ink);text-decoration:none;font-size:.92rem}
+aside .opt[aria-current]{font-weight:700;color:var(--green)}
+aside .opt span{color:var(--muted)}
+aside label{display:flex;gap:.5rem;align-items:center;font-size:.92rem;padding:.3rem 0;cursor:pointer}
+aside hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+@media (max-width:860px){.results{grid-template-columns:1fr}aside.filters{position:static}}
+.rhead{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:12px;flex-wrap:wrap}
+.rhead select{font:inherit;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:8px;padding:.45rem .6rem}
+
+/* Produto */
+.crumbs{font-size:.88rem;margin-bottom:12px;color:var(--muted)}
+.crumbs a{color:var(--muted)}
+.pd{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr) 300px;gap:22px;align-items:start}
+@media (max-width:1100px){.pd{grid-template-columns:minmax(0,380px) 1fr}.pd .side{grid-column:1/-1}}
+@media (max-width:760px){.pd{grid-template-columns:1fr}}
+.gallery{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px}
+.gallery .main{aspect-ratio:3/4;background:var(--img);border-radius:8px;overflow:hidden;cursor:zoom-in}
+.gallery .main img{width:100%;height:100%;object-fit:contain;display:block}
+.pinfo h1{font-size:1.45rem;margin-bottom:.3rem}
+.pbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0}
+.price{font-size:1.6rem;font-weight:700}
+.price.ask{font-size:1.15rem;color:var(--green)}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:.35rem 1rem;margin:0;font-size:.94rem}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;overflow-wrap:anywhere}
+.vars{display:flex;flex-wrap:wrap;gap:6px;margin-top:.5rem}
+.vars span{font-size:.82rem;padding:.25rem .55rem;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+.cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.cta .btn{flex:1 1 200px}
+.side .box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.side h3{font-size:1rem}
+.trust{list-style:none;margin:0;padding:0;font-size:.9rem}
+.trust li{padding:.3rem 0 .3rem 1.5rem;position:relative}
+.trust li::before{content:"✓";position:absolute;left:0;color:var(--green);font-weight:700}
+.details{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:22px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px;overflow-x:auto}
+.tabs button{font:inherit;font-weight:600;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:.55rem .9rem;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--orange)}
+.spec{width:100%;border-collapse:collapse;font-size:.92rem}
+.spec th,.spec td{text-align:left;padding:.55rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
+.spec th{width:38%;color:var(--muted);font-weight:500;background:var(--chip)}
+.scroll{overflow-x:auto}
+.lightbox{position:fixed;inset:0;background:rgba(5,8,20,.86);display:grid;place-items:center;z-index:50;padding:20px;cursor:zoom-out}
+.lightbox img{max-width:100%;max-height:100%;border-radius:8px;background:#fff}
+
+footer{background:var(--navy);color:#C9D0E6;font-size:.88rem;padding:24px 0}
+footer .wrap{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+footer a{color:#fff}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap bar">
+    <a href="#/" aria-label="India Brasil – início do marketplace"><img src="/assets/logo/india-brazil-logo-white.svg" alt="India Brasil"></a>
+    <form class="search" id="topSearch" role="search"><input id="q" type="search" placeholder="O que você procura? Ex.: camiseta algodão, autopeças, especiarias" aria-label="Buscar produtos"><button type="submit">Buscar</button></form>
+    <nav class="links"><a href="/comprador">Minha conta</a><a class="hide-sm" href="/register">Sou fornecedor</a></nav>
+  </div>
+  <div class="sub"><div class="wrap" id="catBar"><a href="#/busca">Todas as categorias</a></div></div>
+</header>
+
+<main class="wrap" id="view" aria-live="polite"></main>
+
+<footer><div class="wrap">
+  <div>India Brasil · indiabrasil.com.br · Conectamos compradores brasileiros a fornecedores indianos verificados.</div>
+  <div>A plataforma não processa pagamentos: gera orçamentos e acompanha a negociação.</div>
+</div></footer>
+
+<script>
+(function(){
+  var SUPABASE_URL="https://fwlgkmtttaelntnibifd.supabase.co";
+  var SUPABASE_ANON_KEY="sb_publishable_rOCe8m9bS5WTyUhS59fsQA_FEoMGE4C"; // publishable: só lê o que as regras do banco liberam
+  var IMG=SUPABASE_URL+"/storage/v1/object/public/product-images/";
+  var COLS="id,name,category,image_path,price_min,price_max,currency,price_unit,moq,variant_count,supplier_id,reference,code,created_at";
+  var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false}});
+  var $=function(id){return document.getElementById(id);};
+  var cats=null, supCache={};
+
+  function h(tag,attrs,kids){
+    var e=document.createElement(tag);
+    Object.keys(attrs||{}).forEach(function(k){
+      if(k==="class")e.className=attrs[k];else if(k.slice(0,2)==="on")e.addEventListener(k.slice(2),attrs[k]);else if(attrs[k]!=null&&attrs[k]!==false)e.setAttribute(k,attrs[k]===true?"":attrs[k]);
+    });
+    [].concat(kids==null?[]:kids).flat(Infinity).forEach(function(c){if(c==null||c===false)return;e.appendChild(typeof c==="object"?c:document.createTextNode(String(c)));});
+    return e;
+  }
+  function money(v,cur){
+    try{return new Intl.NumberFormat("pt-BR",{style:"currency",currency:cur||"USD",maximumFractionDigits:2}).format(v);}catch(e){return (cur||"")+" "+v;}
+  }
+  function priceText(p){
+    if(p.price_min==null&&p.price_max==null)return null;
+    var a=p.price_min!=null?p.price_min:p.price_max,b=p.price_max!=null?p.price_max:p.price_min;
+    return (a===b?money(a,p.currency):money(a,p.currency)+" – "+money(b,p.currency))+(p.price_unit?" / "+p.price_unit:"");
+  }
+  function supLabel(ref){return "Fornecedor "+ref;}
+  function fail(e){console.error(e);var v=$("view");v.textContent="";v.appendChild(h("div",{class:"empty"},"Não foi possível carregar agora. Tente de novo em instantes."));}
+  function clean(q){return q.replace(/[,()*%\\]/g," ").trim();}
+
+  async function suppliers(ids){
+    var need=ids.filter(function(id){return !(id in supCache);});
+    if(need.length){
+      var r=await sb.from("marketplace_suppliers").select("*").in("id",need);
+      if(r.error)throw r.error;
+      need.forEach(function(id){supCache[id]=null;});
+      r.data.forEach(function(s){supCache[s.id]=s;});
+    }
+    return supCache;
+  }
+  // Uma busca só, mesmo se várias partes da página pedirem as categorias ao mesmo tempo
+  function categories(){return cats||(cats=loadCategories());}
+  async function loadCategories(){
+    var r=await sb.from("products").select("category").eq("published",true);
+    if(r.error)throw r.error;
+    var m={};r.data.forEach(function(x){if(x.category)m[x.category]=(m[x.category]||0)+1;});
+    var list=Object.keys(m).sort(function(a,b){return m[b]-m[a]||a.localeCompare(b);}).map(function(k){return [k,m[k]];});
+    var bar=$("catBar");
+    list.forEach(function(c){bar.appendChild(h("a",{href:"#/busca?cat="+encodeURIComponent(c[0])},c[0]));});
+    return list;
+  }
+
+  function card(p,sups){
+    var s=sups[p.supplier_id],pt=priceText(p);
+    return h("a",{class:"card",href:"#/produto/"+p.id},[
+      h("div",{class:"ph"},p.image_path?h("img",{src:IMG+p.image_path,alt:p.name,loading:"lazy"}):null),
+      h("div",{class:"bd"},[
+        h("div",{class:"nm"},p.name),
+        pt?h("div",{class:"pr"},pt):h("div",{class:"pr ask"},"Preço sob consulta"),
+        h("div",{class:"mq"},(p.moq?"Pedido mínimo: "+p.moq:"Pedido mínimo a combinar")+(p.variant_count?" · "+p.variant_count+" variações":"")),
+        h("div",{class:"sp"},[s&&s.verified?h("span",{class:"ver"},"✓ Verificado"):null,h("span",null,supLabel(p.reference)+(s&&s.state?" · "+s.state+", Índia":" · Índia"))])
+      ])
+    ]);
+  }
+  async function grid(list){
+    var sups=await suppliers(list.map(function(p){return p.supplier_id;}).filter(function(v,i,a){return a.indexOf(v)===i;}));
+    return h("div",{class:"grid"},list.map(function(p){return card(p,sups);}));
+  }
+
+  // --- Início ---
+  async function home(v){
+    var form=h("form",{class:"search",role:"search"},[h("input",{type:"search",placeholder:"Busque entre produtos de fabricantes indianos","aria-label":"Buscar produtos"}),h("button",{type:"submit"},"Buscar")]);
+    form.addEventListener("submit",function(e){e.preventDefault();go(form.querySelector("input").value);});
+    v.appendChild(h("section",{class:"hero"},[
+      h("div",null,[h("h1",null,"Compre direto de fabricantes da Índia"),h("p",null,"Fornecedores verificados, orçamento sem custo e a India Brasil acompanhando toda a negociação, em português."),form]),
+      h("div",{class:"steps"},[
+        h("div",null,[h("b",null,"1"),"Busque o produto e compare fornecedores"]),
+        h("div",null,[h("b",null,"2"),"Peça orçamento com quantidade e especificações"]),
+        h("div",null,[h("b",null,"3"),"Converse, troque arquivos e receba cotações com nosso apoio"])
+      ])
+    ]));
+    var c=await categories();
+    if(c.length)v.appendChild(h("div",{class:"chips"},c.map(function(x){return h("a",{class:"chip",href:"#/busca?cat="+encodeURIComponent(x[0])},[x[0],h("span",null,String(x[1]))]);})));
+    var r=await sb.from("products").select(COLS).eq("published",true).order("created_at",{ascending:false}).limit(24);
+    if(r.error)throw r.error;
+    v.appendChild(h("div",{class:"sec"},[h("h2",null,"Produtos em destaque"),h("a",{href:"#/busca"},"Ver todos")]));
+    v.appendChild(r.data.length?await grid(r.data):h("div",{class:"empty"},"Em breve, os primeiros produtos estarão aqui."));
+  }
+
+  // --- Busca com filtros ---
+  async function search(v,params){
+    var q=clean(params.get("q")||""),cat=params.get("cat")||"",verif=params.get("ver")==="1",price=params.get("preco")==="1",sort=params.get("ordem")||"rel";
+    $("q").value=q;
+    var x=sb.from("products").select(COLS).eq("published",true);
+    // Cada palavra precisa aparecer em algum campo (nome, categoria, descrição ou código)
+    q.split(/\s+/).filter(Boolean).forEach(function(w){x=x.or(["name","category","description","code"].map(function(c){return c+".ilike.*"+w+"*";}).join(","));});
+    if(cat)x=x.eq("category",cat);
+    if(price)x=x.not("price_min","is",null);
+    x=sort==="novo"?x.order("created_at",{ascending:false}):x.order("name");
+    var r=await x.limit(120);
+    if(r.error)throw r.error;
+    var sups=await suppliers(r.data.map(function(p){return p.supplier_id;}).filter(function(v,i,a){return a.indexOf(v)===i;}));
+    var list=verif?r.data.filter(function(p){return sups[p.supplier_id]&&sups[p.supplier_id].verified;}):r.data;
+
+    var c=await categories();
+    function link(over){var p=new URLSearchParams(params);Object.keys(over).forEach(function(k){if(over[k])p.set(k,over[k]);else p.delete(k);});return "#/busca?"+p.toString();}
+    var checkbox=function(key,label){var i=h("input",{type:"checkbox"});i.checked=params.get(key)==="1";i.addEventListener("change",function(){location.hash=link((function(){var o={};o[key]=i.checked?"1":"";return o;})());});return h("label",null,[i,label]);};
+    var aside=h("aside",{class:"filters"},[
+      h("h3",null,"Categorias"),
+      h("a",{class:"opt",href:link({cat:""}),"aria-current":cat?null:"true"},["Todas",h("span",null,String(c.reduce(function(n,x){return n+x[1];},0)))]),
+      c.map(function(x){return h("a",{class:"opt",href:link({cat:x[0]}),"aria-current":cat===x[0]?"true":null},[x[0],h("span",null,String(x[1]))]);}),
+      h("hr"),h("h3",null,"Fornecedor"),checkbox("ver","Somente verificados"),
+      h("hr"),h("h3",null,"Preço"),checkbox("preco","Com preço informado")
+    ]);
+    var ord=h("select",{"aria-label":"Ordenar"},[h("option",{value:"rel"},"Ordem alfabética"),h("option",{value:"novo"},"Mais recentes")]);
+    ord.value=sort;ord.addEventListener("change",function(){location.hash=link({ordem:ord.value==="rel"?"":ord.value});});
+    var title=q?"Resultados para “"+q+"”":cat||"Todos os produtos";
+    v.appendChild(h("div",{class:"results"},[aside,h("section",null,[
+      h("div",{class:"rhead"},[h("div",null,[h("h1",{style:"font-size:1.3rem;margin:0"},title),h("div",{class:"muted"},list.length+" produto"+(list.length===1?"":"s"))]),ord]),
+      list.length?await grid(list):h("div",{class:"empty"},[h("p",null,"Nenhum produto encontrado."),h("p",null,["Não achou o que precisa? ",h("a",{href:"https://wa.me/5547996390456?text="+encodeURIComponent("Olá! Procuro um fornecedor indiano para: "+(q||cat)),target:"_blank",rel:"noopener"},"Fale com nossa equipe"),", nós buscamos o fornecedor para você."])])
+    ])]));
+  }
+
+  // --- Produto ---
+  async function product(v,id){
+    var r=await sb.from("products").select("*").eq("id",id).eq("published",true).maybeSingle();
+    if(r.error)throw r.error;
+    if(!r.data){v.appendChild(h("div",{class:"empty"},"Produto não encontrado ou fora do ar."));return;}
+    var p=r.data,sups=await suppliers([p.supplier_id]),s=sups[p.supplier_id]||{},pt=priceText(p);
+    document.title=p.name+" | India Brasil";
+    var specs=p.specs||{},vars=p.variants||[];
+    var colors=vars.map(function(x){return (x.attributes&&(x.attributes.Cor||x.attributes.Color||x.attributes.Colour))||x.name;}).filter(Boolean);
+    var sizes=specs.Tamanhos||(vars[0]&&vars[0].attributes&&(vars[0].attributes.Tamanhos||vars[0].attributes.Size));
+    var quote="/comprador#/novo/"+p.id;
+
+    v.appendChild(h("div",{class:"crumbs"},[h("a",{href:"#/"},"Marketplace")," › ",p.category?h("a",{href:"#/busca?cat="+encodeURIComponent(p.category)},p.category):"Produtos"," › ",p.name]));
+    var img=p.image_path?h("img",{src:IMG+p.image_path,alt:p.name}):null;
+    v.appendChild(h("div",{class:"pd"},[
+      h("div",{class:"gallery"},h("div",{class:"main",onclick:function(){if(img)zoom(img.src);}},img)),
+      h("div",{class:"pinfo"},[
+        h("h1",null,p.name),
+        h("div",{class:"muted"},[p.code?"Código "+p.code+" · ":"",supLabel(p.reference)]),
+        h("div",{class:"pbox"},[
+          pt?h("div",{class:"price"},pt):h("div",{class:"price ask"},"Preço sob consulta – peça seu orçamento"),
+          h("dl",{class:"kv",style:"margin-top:.6rem"},[
+            h("dt",null,"Pedido mínimo"),h("dd",null,p.moq||"A combinar com o fornecedor"),
+            sizes?h("dt",null,"Tamanhos"):null,sizes?h("dd",null,sizes):null,
+            h("dt",null,"Variações"),h("dd",null,(p.variant_count||vars.length)+" opções"),
+            p.certifications&&p.certifications.length?h("dt",null,"Certificações"):null,p.certifications&&p.certifications.length?h("dd",null,p.certifications.join(", ")):null
+          ]),
+          colors.length?h("div",{style:"margin-top:.8rem"},[h("b",null,"Cores ("+colors.length+")"),h("div",{class:"vars"},colors.slice(0,40).map(function(c){return h("span",null,c);}).concat(colors.length>40?[h("span",null,"+"+(colors.length-40))]:[]))]):null,
+          h("div",{class:"cta"},[h("a",{class:"btn",href:quote},"Solicitar orçamento"),h("a",{class:"btn btn-ghost",href:quote},"Conversar com o fornecedor")])
+        ]),
+        p.description?h("p",null,p.description):null
+      ]),
+      h("div",{class:"side"},[
+        h("div",{class:"box"},[h("h3",null,supLabel(p.reference)),
+          s.verified?h("p",{class:"ver",style:"margin:.2rem 0 .6rem"},"✓ Fornecedor verificado pela India Brasil"):null,
+          h("dl",{class:"kv"},[h("dt",null,"Local"),h("dd",null,(s.state?s.state+", ":"")+"Índia"),
+            s.business_type?h("dt",null,"Tipo"):null,s.business_type?h("dd",null,s.business_type):null,
+            s.year_established?h("dt",null,"Desde"):null,s.year_established?h("dd",null,String(s.year_established)):null,
+            s.certifications&&s.certifications.length?h("dt",null,"Certificações"):null,s.certifications&&s.certifications.length?h("dd",null,s.certifications.join(", ")):null]),
+          h("a",{class:"btn btn-ghost",style:"width:100%;margin-top:.9rem",href:"#/fornecedor/"+p.supplier_id},"Ver todos os produtos")]),
+        h("div",{class:"box"},[h("h3",null,"Como funciona"),h("ul",{class:"trust"},[
+          h("li",null,"Orçamento sem custo e sem compromisso"),
+          h("li",null,"Conversa com o fornecedor dentro da plataforma, com anexos"),
+          h("li",null,"A India Brasil acompanha e ajuda na negociação"),
+          h("li",null,"O pagamento é combinado direto entre as partes")])])
+      ])
+    ]));
+
+    // Detalhes: atributos e tabela de medidas
+    var attr=[],meas=[];
+    Object.keys(specs).forEach(function(k){(/^Medida/.test(k)?meas:attr).push([k.replace(/^Medida \(cm, P\/M\/G\/GG\): /,""),specs[k]]);});
+    var panes={
+      "Detalhes do produto":h("div",{class:"scroll"},h("table",{class:"spec"},h("tbody",null,attr.map(function(a){return h("tr",null,[h("th",null,a[0]),h("td",null,String(a[1]))]);})))),
+      "Tabela de medidas":meas.length?h("div",{class:"scroll"},[h("p",{class:"muted"},"Medidas em cm para os tamanhos P / M / G / GG."),h("table",{class:"spec"},h("tbody",null,meas.map(function(a){return h("tr",null,[h("th",null,a[0]),h("td",null,String(a[1]))]);})))]):null,
+      "Variações":vars.length?h("div",{class:"scroll"},h("table",{class:"spec"},[h("thead",null,h("tr",null,[h("th",null,"Variação"),h("th",null,"Detalhes")])),
+        h("tbody",null,vars.slice(0,300).map(function(x){return h("tr",null,[h("td",null,x.name||"–"),h("td",null,Object.keys(x.attributes||{}).map(function(k){return k+": "+x.attributes[k];}).join(" · "))]);}))])):null
+    };
+    var names=Object.keys(panes).filter(function(k){return panes[k];});
+    var body=h("div"),tabs=h("div",{class:"tabs",role:"tablist"});
+    names.forEach(function(n,i){tabs.appendChild(h("button",{type:"button",role:"tab","aria-selected":i===0?"true":"false",onclick:function(){
+      tabs.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-selected",b.textContent===n);});body.textContent="";body.appendChild(panes[n]);}},n));});
+    body.appendChild(panes[names[0]]);
+    v.appendChild(h("section",{class:"details"},[tabs,body]));
+
+    if(p.category){
+      var sim=await sb.from("products").select(COLS).eq("published",true).eq("category",p.category).neq("id",p.id).limit(10);
+      if(!sim.error&&sim.data.length){v.appendChild(h("div",{class:"sec",style:"margin-top:26px"},h("h2",null,"Produtos semelhantes")));v.appendChild(await grid(sim.data));}
+    }
+  }
+  function zoom(src){var l=h("div",{class:"lightbox",role:"dialog","aria-label":"Imagem ampliada",onclick:function(){l.remove();}},h("img",{src:src,alt:""}));document.body.appendChild(l);}
+
+  // --- Vitrine do fornecedor ---
+  async function supplier(v,id){
+    var sups=await suppliers([id]),s=sups[id];
+    if(!s){v.appendChild(h("div",{class:"empty"},"Fornecedor não encontrado."));return;}
+    var r=await sb.from("products").select(COLS).eq("published",true).eq("supplier_id",id).order("category").order("name");
+    if(r.error)throw r.error;
+    v.appendChild(h("div",{class:"pbox",style:"margin-top:0"},[h("h1",{style:"font-size:1.4rem"},supLabel(s.reference)),
+      s.verified?h("p",{class:"ver"},"✓ Fornecedor verificado pela India Brasil"):null,
+      h("p",{class:"muted",style:"margin:0"},[s.business_type,(s.state?s.state+", ":"")+"Índia",s.year_established?"desde "+s.year_established:null].filter(Boolean).join(" · ")),
+      s.categories&&s.categories.length?h("p",{class:"muted",style:"margin:.3rem 0 0"},"Categorias: "+s.categories.join(", ")):null]));
+    v.appendChild(h("div",{class:"sec"},h("h2",null,r.data.length+" produtos")));
+    v.appendChild(await grid(r.data));
+  }
+
+  // --- Rotas: #/  #/busca?q=…  #/produto/<id>  #/fornecedor/<id> ---
+  function go(q){location.hash="#/busca"+(clean(q)?"?q="+encodeURIComponent(clean(q)):"");}
+  $("topSearch").addEventListener("submit",function(e){e.preventDefault();go($("q").value);});
+  async function route(){
+    var hash=location.hash.replace(/^#/,"")||"/",v=$("view");
+    v.textContent="";document.title="Marketplace | India Brasil – produtos de fornecedores indianos";
+    var path=hash.split("?")[0],params=new URLSearchParams(hash.split("?")[1]||"");
+    document.querySelectorAll("#catBar a").forEach(function(a){a.toggleAttribute("aria-current",a.getAttribute("href")==="#"+hash);});
+    try{
+      var m;
+      if((m=path.match(/^\/produto\/(.+)$/)))await product(v,m[1]);
+      else if((m=path.match(/^\/fornecedor\/(.+)$/)))await supplier(v,m[1]);
+      else if(path==="/busca")await search(v,params);
+      else await home(v);
+    }catch(e){fail(e);}
+    window.scrollTo(0,0);
+  }
+  window.addEventListener("hashchange",route);
+  categories().catch(function(){});
+  route();
+})();
+</script>
+</body>
+</html>
