@@ -376,6 +376,14 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:0 1rem 2rem
   function chips(id,list,name){var box=document.getElementById(id);list.forEach(function(v){var l=document.createElement("label");var i=document.createElement("input");i.type="checkbox";i.name=name;i.value=v;l.appendChild(i);l.appendChild(document.createTextNode(v));box.appendChild(l);});}
   chips("cats",CATS,"categories"); chips("certs",CERTS,"certifications");
 
+  // Vindo do formulário da página inicial ("See the demand"): já preenche o que a pessoa informou
+  (function(){
+    var q=new URLSearchParams(location.search),set=function(id,v){var el=document.getElementById(id);if(el&&v&&!el.value)el.value=v;};
+    set("email",q.get("e"));set("mobile",q.get("m"));set("main_products",q.get("p"));
+    var c=q.get("cat");
+    if(c)Array.prototype.forEach.call(document.querySelectorAll('input[name="categories"]'),function(i){if(i.value===c)i.checked=true;});
+  })();
+
   var form=document.getElementById("reg"), step=1, TOTAL=4;
   var NAMES=["Company","Contact","Products","Catalogue and review"];
   var $=function(id){return document.getElementById(id);};
