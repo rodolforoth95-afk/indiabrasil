@@ -444,7 +444,7 @@ footer p{margin:.4rem 0 0}
         h("div",{class:"tags"},["Mais buscados:",c.slice(0,5).map(function(x){return h("a",{href:BASE+"/busca?cat="+encodeURIComponent(x.name)},x.name);})]),
         h("div",{class:"stats"},[
           h("div",null,[h("b",null,num(prods.length)),h("span",null,"produtos")]),
-          h("div",null,[h("b",null,num(nVer||nSup)),h("span",null,nVer?"fornecedores verificados":"fornecedores")]),
+          h("div",null,[h("b",null,num(nVer||nSup)),h("span",null,(nVer?"fornecedor":"fornecedor")+((nVer||nSup)===1?"":"es")+(nVer?((nVer===1)?" verificado":" verificados"):""))]),
           h("div",null,[h("b",null,num(c.length)),h("span",null,"categorias")]),
           h("div",null,[h("b",null,"R$ 0"),h("span",null,"para pedir orçamento")])
         ])
