@@ -14,6 +14,7 @@ Comandos:
     python3 tools/catalogues.py job IB-XXX processing|error ["mensagem"]
     python3 tools/catalogues.py images IB-XXX    # fotos dos produtos (página do catálogo) -> marketplace
     python3 tools/catalogues.py sitemap          # gera sitemap.xml com os produtos publicados (commit + push)
+    python3 tools/catalogues.py publish IB-XXX   # coloca o resumo no marketplace (igual ao botão do /admin)
 """
 import datetime
 import json
@@ -273,6 +274,34 @@ def cmd_images(ref):
     print("%s: %d imagens enviadas, %d produtos com foto" % (ref, sent, sum(1 for p in summary.get("products", []) if p.get("image"))))
 
 
+def cmd_publish(ref):
+    """Mesmo resultado do botão "Publicar no marketplace" do /admin (função SQL publish_catalogue):
+    recria os produtos do fornecedor a partir do resumo e marca o cadastro como publicado."""
+    s = supplier(ref)
+    row = call("GET", "/rest/v1/catalogue_summaries?supplier_id=eq.%s&select=summary" % s["id"])
+    if not row:
+        sys.exit("Sem resumo salvo para " + ref)
+    summary = row[0]["summary"]
+    num = lambda v: None if v in (None, "") else float(v)
+    rows = []
+    for p in summary.get("products", []):
+        if not p.get("name"):
+            continue
+        specs = p.get("specs") or {}
+        variants = p.get("variants") or []
+        rows.append({"supplier_id": s["id"], "reference": ref, "code": specs.get("Código") or p.get("code"),
+                     "name": p["name"], "category": p.get("category"), "description": p.get("description"),
+                     "image_path": p.get("image"), "price_min": num(p.get("price_min")), "price_max": num(p.get("price_max")),
+                     "currency": summary.get("currency"), "price_unit": p.get("price_unit"), "moq": p.get("moq"),
+                     "specs": specs, "variants": variants, "variant_count": len(variants),
+                     "certifications": p.get("certifications") or [], "source": p.get("source")})
+    call("DELETE", "/rest/v1/products?supplier_id=eq." + s["id"], headers={"Prefer": "return=minimal"})
+    if rows:
+        call("POST", "/rest/v1/products", rows, {"Prefer": "return=minimal"})
+    call("PATCH", "/rest/v1/suppliers?id=eq." + s["id"], {"status": "published"}, {"Prefer": "return=minimal"})
+    print("%s: %d produtos no marketplace" % (ref, len(rows)))
+
+
 SITE = "https://www.indiabrasil.com.br"
 
 
@@ -324,6 +353,8 @@ if __name__ == "__main__":
         cmd_render(a[1])
     elif a[:1] == ["images"] and len(a) == 2:
         cmd_images(a[1])
+    elif a[:1] == ["publish"] and len(a) == 2:
+        cmd_publish(a[1])
     elif a[:1] == ["sitemap"]:
         cmd_sitemap()
     elif a[:1] == ["queue"]:
