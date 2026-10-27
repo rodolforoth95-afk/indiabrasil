@@ -10,9 +10,11 @@ pedidos de orçamento (RFQs) de compradores brasileiros.
 - portal.html – portal do fornecedor (/portal, em inglês): conta ligada ao cadastro pelo e-mail confirmado,
   2FA por app autenticador obrigatório, cadastro, catálogos, orçamentos (RFQs), cotações e chat
 - admin-orcamentos.html – time cria RFQs, vê cotações e conversa no chat (/admin-orcamentos, mesmo login do /admin)
-- marketplace.html – vitrine pública B2B (/marketplace, português): busca, categorias, produto, vitrine do fornecedor
+- marketplace.html – vitrine pública B2B (/marketplace, português; endereços reais /marketplace/produto/<id>/<nome>, ver rewrite no vercel.json): busca, categorias, produto com cotação rápida, lista de cotação, vitrine do fornecedor
   (o comprador vê "Fornecedor IB-XXXX", nunca nome/contato: o meio de campo é da India Brasil)
-- comprador.html – área do comprador (/comprador): conta, perfil da empresa, pedido de orçamento e conversas
+- comprador.html – área do comprador (/comprador): conta, perfil, pedido (orçamento ou amostra, retoma o rascunho do marketplace), lista de cotação, pedido livre e conversas
+- docs/marketplace-benchmark.md – referências B2B (Alibaba, IndiaMART…), o que adotamos e próximas fases
+- sitemap.xml / robots.txt – gerar de novo com `python3 tools/catalogues.py sitemap` sempre que publicar produtos
 - assets/js/rfq-chat.js – conversa B2B compartilhada (portal, comprador, admin-orcamentos): tempo real + anexos
 - tools/catalogues.py – baixa catálogos e salva resumos (usa SUPABASE_SECRET_KEY do .env, nunca vai para o site)
 - assets/logo – logos SVG (globo laranja/verde com seta, texto branco)

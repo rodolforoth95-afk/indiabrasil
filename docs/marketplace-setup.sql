@@ -264,3 +264,83 @@ drop policy if exists "rfq participants upload files" on storage.objects;
 create policy "rfq participants upload files"
   on storage.objects for insert to authenticated
   with check (bucket_id = 'rfq-files' and public.can_access_rfq((storage.foldername(name))[1]));
+
+-- 8) Conversão: pedido de amostra, pedido livre (sem produto) e funil
+-- Tipo do pedido: cotação ou amostra (amostra = menor compromisso, ajuda a fechar o primeiro negócio)
+alter table public.rfqs add column if not exists request_type text not null default 'quote';
+do $$ begin
+  alter table public.rfqs add constraint rfqs_request_type check (request_type in ('quote','sample'));
+exception when duplicate_object then null;
+end $$;
+
+-- Pedido livre: o comprador descreve o que precisa e a equipe encontra fornecedores
+-- (vira um ou mais RFQs com sourcing_id apontando para cá)
+create table if not exists public.sourcing_requests (
+  id           uuid primary key default gen_random_uuid(),
+  code         text not null unique default ('REQ-' || upper(substr(md5(random()::text), 1, 6))),
+  created_at   timestamptz not null default now(),
+  buyer_id     uuid not null references public.buyers (id) on delete cascade,
+  title        text not null check (length(btrim(title)) between 3 and 200),
+  category     text,
+  quantity     numeric,
+  unit         text,
+  target_price numeric,
+  currency     text default 'USD',
+  destination  text,
+  needed_by    date,
+  details      text check (details is null or length(details) <= 4000),
+  status       text not null default 'open' check (status in ('open','matching','sent','closed')),
+  team_notes   text
+);
+alter table public.sourcing_requests enable row level security;
+revoke all on public.sourcing_requests from anon;
+
+drop policy if exists "admins manage sourcing" on public.sourcing_requests;
+create policy "admins manage sourcing"
+  on public.sourcing_requests for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "buyer reads own sourcing" on public.sourcing_requests;
+create policy "buyer reads own sourcing"
+  on public.sourcing_requests for select to authenticated
+  using (buyer_id = public.my_buyer_id());
+
+drop policy if exists "buyer creates sourcing" on public.sourcing_requests;
+create policy "buyer creates sourcing"
+  on public.sourcing_requests for insert to authenticated
+  with check (buyer_id = public.my_buyer_id() and status = 'open' and team_notes is null);
+
+alter table public.rfqs add column if not exists sourcing_id uuid references public.sourcing_requests (id) on delete set null;
+
+-- Funil do marketplace: eventos anônimos (sem dados pessoais) para medir a conversão
+create table if not exists public.marketplace_events (
+  id         bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  session    text check (length(session) <= 64),
+  event      text not null check (event in ('view_home','search','view_product','add_to_list','start_quote',
+                                            'quote_sent','sample_sent','sourcing_sent','signup')),
+  product_id uuid,
+  query      text check (length(query) <= 200)
+);
+create index if not exists marketplace_events_created_idx on public.marketplace_events (created_at desc, event);
+alter table public.marketplace_events enable row level security;
+
+drop policy if exists "anyone logs events" on public.marketplace_events;
+create policy "anyone logs events"
+  on public.marketplace_events for insert to anon, authenticated with check (true);
+
+drop policy if exists "admins read events" on public.marketplace_events;
+create policy "admins read events"
+  on public.marketplace_events for select to authenticated using (public.is_admin());
+
+grant insert on public.marketplace_events to anon, authenticated;
+
+-- O comprador não pode ligar o próprio pedido a um pedido livre (isso é trabalho da equipe)
+drop policy if exists "buyer requests quotes" on public.rfqs;
+create policy "buyer requests quotes"
+  on public.rfqs for insert to authenticated
+  with check (
+    buyer_id = public.my_buyer_id() and status = 'open' and sourcing_id is null
+    and exists (select 1 from public.products p
+                where p.id = product_id and p.published and p.supplier_id = rfqs.supplier_id)
+  );

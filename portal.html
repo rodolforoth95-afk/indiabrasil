@@ -476,11 +476,11 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
 
     var left=h("div",null,[
       h("div",{class:"card",style:"margin-bottom:16px"},[h("h3",null,"Request"),dl([
-        ["Buyer",q.buyer_label],["Quantity",q.quantity!=null?q.quantity+" "+(q.unit||""):null],
+        ["Request type",q.request_type==="sample"?"Sample request":"Quotation"],["Buyer",q.buyer_label],["Quantity",q.quantity!=null?q.quantity+" "+(q.unit||""):null],
         ["Target price",q.target_price!=null?q.target_price+" "+(q.currency||""):null],["Incoterm",q.incoterm],
         ["Destination",q.destination],["Needed by",q.needed_by?date(q.needed_by):null],["Received",date(q.created_at)],
         ["Source",q.origin==="marketplace"?"India Brasil marketplace":"India Brasil team"]]),
-        q.product_id?h("p",{style:"margin:.6rem 0 0"},h("a",{href:"/marketplace#/produto/"+q.product_id,target:"_blank",rel:"noopener"},"See the product on the marketplace")):null,
+        q.product_id?h("p",{style:"margin:.6rem 0 0"},h("a",{href:"/marketplace/produto/"+q.product_id,target:"_blank",rel:"noopener"},"See the product on the marketplace")):null,
         q.details?h("p",{style:"margin:1rem 0 0;white-space:pre-wrap"},q.details):null]),
       quotesCard(q,qs.data)
     ]);

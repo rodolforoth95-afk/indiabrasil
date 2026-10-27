@@ -13,6 +13,7 @@ Comandos:
     python3 tools/catalogues.py queue            # pedidos do botão "Processar com IA" do /admin
     python3 tools/catalogues.py job IB-XXX processing|error ["mensagem"]
     python3 tools/catalogues.py images IB-XXX    # fotos dos produtos (página do catálogo) -> marketplace
+    python3 tools/catalogues.py sitemap          # gera sitemap.xml com os produtos publicados (commit + push)
 """
 import datetime
 import json
@@ -272,6 +273,32 @@ def cmd_images(ref):
     print("%s: %d imagens enviadas, %d produtos com foto" % (ref, sent, sum(1 for p in summary.get("products", []) if p.get("image"))))
 
 
+SITE = "https://www.indiabrasil.com.br"
+
+
+def slug(text):
+    import unicodedata
+    text = unicodedata.normalize("NFD", text or "").encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "-", text).strip("-")[:80]
+
+
+def cmd_sitemap():
+    """Gera sitemap.xml (páginas públicas + produtos e vitrines publicados) para o Google."""
+    prods = call("GET", "/rest/v1/products?select=id,name,supplier_id,created_at&published=eq.true&order=created_at")
+    urls = [(SITE + "/", None), (SITE + "/register", None), (SITE + "/marketplace", None)]
+    for sid in sorted({p["supplier_id"] for p in prods}):
+        urls.append((SITE + "/marketplace/fornecedor/" + sid, None))
+    for p in prods:
+        urls.append((SITE + "/marketplace/produto/%s/%s" % (p["id"], slug(p["name"])), p["created_at"][:10]))
+    xml = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for loc, mod in urls:
+        xml.append("  <url><loc>%s</loc>%s</url>" % (loc, "<lastmod>%s</lastmod>" % mod if mod else ""))
+    xml.append("</urlset>")
+    with open(os.path.join(ROOT, "sitemap.xml"), "w", encoding="utf-8") as f:
+        f.write("\n".join(xml) + "\n")
+    print("sitemap.xml: %d endereços (%d produtos)" % (len(urls), len(prods)))
+
+
 def cmd_save(ref, path):
     s = supplier(ref)
     summary = json.load(open(path, encoding="utf-8"))
@@ -297,6 +324,8 @@ if __name__ == "__main__":
         cmd_render(a[1])
     elif a[:1] == ["images"] and len(a) == 2:
         cmd_images(a[1])
+    elif a[:1] == ["sitemap"]:
+        cmd_sitemap()
     elif a[:1] == ["queue"]:
         cmd_queue()
     elif a[:1] == ["job"] and len(a) in (3, 4):

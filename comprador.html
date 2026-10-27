@@ -127,6 +127,7 @@ dd{margin:0;overflow-wrap:anywhere}
 
   <form class="card auth" id="vSignup" hidden>
     <h1>Criar conta de comprador</h1>
+    <p class="note" id="suNote" hidden></p>
     <p class="muted">Para empresas brasileiras que querem comprar de fornecedores indianos.</p>
     <div class="field"><label for="suEmail">E-mail da empresa</label><input id="suEmail" type="email" autocomplete="username" required></div>
     <div class="field"><label for="suPass">Senha</label><input id="suPass" type="password" autocomplete="new-password" minlength="10" required><p class="hint">Pelo menos 10 caracteres.</p></div>
@@ -166,6 +167,7 @@ dd{margin:0;overflow-wrap:anywhere}
   var SEG=["Varejo / loja","Atacado / distribuidor","Indústria","Importador / trading","E-commerce","Outro"];
   var UF="AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ");
   var CUR=["USD","BRL","INR","EUR"], INCO=["FOB","CIF","CFR","EXW","FCA","DAP","DDP"];
+  var SRC={open:["Em análise pela equipe","warn"],matching:["Buscando fornecedores","warn"],sent:["Cotações a caminho","good"],closed:["Encerrado",""]};
 
   // Sessão própria do comprador (não mistura com o portal do fornecedor nem com o /admin)
   var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{storageKey:"ib-buyer-auth"}});
@@ -178,7 +180,7 @@ dd{margin:0;overflow-wrap:anywhere}
     Object.keys(attrs||{}).forEach(function(k){
       if(k==="class")e.className=attrs[k];else if(k.slice(0,2)==="on")e.addEventListener(k.slice(2),attrs[k]);else if(attrs[k]!=null&&attrs[k]!==false)e.setAttribute(k,attrs[k]===true?"":attrs[k]);
     });
-    [].concat(kids==null?[]:kids).forEach(function(c){if(c==null||c===false)return;e.appendChild(typeof c==="object"?c:document.createTextNode(String(c)));});
+    [].concat(kids==null?[]:kids).flat(Infinity).forEach(function(c){if(c==null||c===false)return;e.appendChild(typeof c==="object"?c:document.createTextNode(String(c)));});
     return e;
   }
   function txt(v){return v==null||v===""?"–":String(v);}
@@ -194,6 +196,12 @@ dd{margin:0;overflow-wrap:anywhere}
   function sel(id,opts,val){var s=h("select",{id:id});opts.forEach(function(o){s.appendChild(h("option",{value:o},o));});if(val!=null)s.value=val;return s;}
   function fld(label,input,cls){return h("div",{class:"field"+(cls?" "+cls:"")},[h("label",{for:input.id},label),input]);}
   function here(){return location.origin+"/comprador"+(recovering?"":location.hash);}
+  function productUrl(id){return "/marketplace/produto/"+id;}
+  // Rascunhos vindos do marketplace (cotação rápida, lista de cotação, pedido livre) ficam neste navegador
+  function store(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k)||"null");if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v));}catch(e){return null;}}
+  // Funil do marketplace (anônimo)
+  var SID=(function(){try{var x=sessionStorage.getItem("ib-sid");if(!x){x=Math.random().toString(36).slice(2)+Date.now().toString(36);sessionStorage.setItem("ib-sid",x);}return x;}catch(e){return null;}})();
+  function track(event,extra){sb.from("marketplace_events").insert(Object.assign({session:SID,event:event},extra||{})).then(function(){},function(){});}
 
   document.querySelectorAll("[data-go]").forEach(function(b){b.addEventListener("click",function(){show(b.dataset.go);});});
 
@@ -213,6 +221,7 @@ dd{margin:0;overflow-wrap:anywhere}
     var r=await sb.auth.signUp({email:$("suEmail").value.trim().toLowerCase(),password:$("suPass").value,options:{emailRedirectTo:here()}});
     busy(f,false);
     if(r.error)return msg(f,r.error.message);
+    track("signup");
     $("suPass").value=$("suPass2").value="";
     msg(f,"","Quase lá! Enviamos um link de confirmação para o seu e-mail. Abra o link para ativar a conta e depois entre.");
   });
@@ -237,7 +246,13 @@ dd{margin:0;overflow-wrap:anywhere}
   async function route(){
     stopChat();
     var s=(await sb.auth.getSession()).data.session;
-    if(!s){$("who").hidden=true;$("siNote").hidden=!/^#\/novo\//.test(location.hash);show("vSignin");return;}
+    if(!s){
+      $("who").hidden=true;
+      var why=/^#\/novo\//.test(location.hash)?"Para pedir orçamento":/^#\/lista/.test(location.hash)?"Para enviar sua lista de cotação":/^#\/pedido-livre/.test(location.hash)?"Para enviar seu pedido de cotação":null;
+      ["siNote","suNote"].forEach(function(id){$(id).hidden=!why;if(why)$(id).textContent=why+", entre ou crie sua conta grátis. Seu pedido fica guardado e leva menos de 1 minuto.";});
+      show(why&&!store("ib-has-account")?"vSignup":"vSignin");return;
+    }
+    store("ib-has-account",true);
     if(recovering)return show("vNewpass");
     me=s.user;$("who").hidden=false;
     if(!buyer){
@@ -250,6 +265,9 @@ dd{margin:0;overflow-wrap:anywhere}
     var m;
     if((m=location.hash.match(/^#\/novo\/(.+)$/)))return newRequest(v,m[1]).catch(fail);
     if((m=location.hash.match(/^#\/pedido\/(.+)$/)))return messenger(v,m[1]).catch(fail);
+    if((m=location.hash.match(/^#\/livre\/(.+)$/)))return messenger(v,null,m[1]).catch(fail);
+    if(/^#\/lista/.test(location.hash))return quoteList(v).catch(fail);
+    if(/^#\/pedido-livre/.test(location.hash))return sourcing(v).catch(fail);
     messenger(v,null).catch(fail);
   }
   window.addEventListener("hashchange",function(){if(!recovering)route();});
@@ -285,50 +303,140 @@ dd{margin:0;overflow-wrap:anywhere}
     v.appendChild(h("div",{style:"max-width:760px;margin:0 auto"},f));
   }
 
-  // --- Novo pedido de orçamento a partir de um produto ---
+  // --- Novo pedido de orçamento a partir de um produto (retoma a cotação rápida do marketplace) ---
   async function newRequest(v,productId){
     var r=await sb.from("products").select("*").eq("id",productId).eq("published",true).maybeSingle();
     if(r.error)throw r.error;
     if(!r.data){v.appendChild(h("div",{class:"card empty"},["Produto não encontrado. ",h("a",{href:"/marketplace"},"Voltar ao marketplace")]));return;}
-    var p=r.data,specs=p.specs||{};
+    var p=r.data,specs=p.specs||{},d=store("ib-rfq-draft");
+    if(!d||d.productId!==p.id)d={};
     var f=h("form",{class:"card form2"},[
-      h("div",{class:"full"},[h("h1",{style:"font-size:1.35rem"},"Solicitar orçamento"),h("p",{class:"muted"},"Quanto mais detalhes, mais rápida e precisa a cotação. Depois de enviar, você conversa com o fornecedor e pode anexar arquivos.")]),
-      fld("Quantidade *",h("input",{id:"rQty",type:"number",min:"1",step:"any",required:true})),
-      fld("Unidade",h("input",{id:"rUnit",value:p.price_unit||"peças"})),
+      h("div",{class:"full"},[h("h1",{style:"font-size:1.35rem"},d.qty?"Confira e envie seu pedido":"Solicitar orçamento"),h("p",{class:"muted"},"Quanto mais detalhes, mais rápida e precisa a cotação. Depois de enviar, você conversa com o fornecedor e pode anexar arquivos.")]),
+      fld("Tipo de pedido",sel("rType",["Orçamento","Amostra"],d.type==="sample"?"Amostra":"Orçamento")),
+      fld("Quantidade *",h("input",{id:"rQty",type:"number",min:"1",step:"any",required:true,value:d.qty||""})),
+      fld("Unidade",h("input",{id:"rUnit",value:d.unit||p.price_unit||"peças"})),
       fld("Preço-alvo por unidade (opcional)",h("input",{id:"rTarget",type:"number",min:"0",step:"any"})),
       fld("Moeda",sel("rCur",CUR,p.currency&&CUR.indexOf(p.currency)>-1?p.currency:"USD")),
       fld("Incoterm",sel("rInco",INCO,"FOB")),
-      fld("Destino (cidade ou porto) *",h("input",{id:"rDest",required:true,value:buyer.city?buyer.city+"/"+buyer.state:"",placeholder:"Ex.: Santos/SP"})),
+      fld("Destino (cidade ou porto)",h("input",{id:"rDest",value:buyer.city?buyer.city+"/"+buyer.state:"",placeholder:"Ex.: Santos/SP"})),
       fld("Preciso até",h("input",{id:"rNeed",type:"date"})),
-      h("div",{class:"field full"},[h("label",{for:"rDetails"},"Detalhes do pedido *"),h("textarea",{id:"rDetails",required:true,placeholder:"Cores, tamanhos, quantidades por variação, embalagem, etiqueta/marca própria, certificações exigidas…"})]),
-      h("div",{class:"full"},[h("button",{class:"btn btn-orange",type:"submit"},"Enviar pedido de orçamento"),h("p",{class:"err",role:"alert"})])
+      h("div",{class:"field full"},[h("label",{for:"rDetails"},"Detalhes do pedido"),h("textarea",{id:"rDetails",placeholder:"Cores, tamanhos, quantidades por variação, embalagem, etiqueta/marca própria, certificações exigidas…"},d.details||"")]),
+      h("div",{class:"full"},[h("button",{class:"btn btn-orange",type:"submit"},"Enviar pedido"),h("p",{class:"err",role:"alert"})])
+    ]);
+    var typeSel=f.querySelector("#rType"),qtyIn=f.querySelector("#rQty");
+    function syncType(){var sample=typeSel.value==="Amostra";qtyIn.required=!sample;if(sample&&!qtyIn.value)qtyIn.value="1";}
+    typeSel.addEventListener("change",syncType);syncType();
+    f.addEventListener("submit",async function(ev){
+      ev.preventDefault();msg(f);
+      var val=function(id){return f.querySelector("#"+id).value.trim();},num=function(id){return val(id)===""?null:+val(id);};
+      var sample=val("rType")==="Amostra";
+      busy(f,true);
+      var ins=await sb.from("rfqs").insert({supplier_id:p.supplier_id,buyer_id:buyer.id,product_id:p.id,buyer_label:"Buyer",request_type:sample?"sample":"quote",
+        product:(sample?"[SAMPLE] ":"")+p.name+(p.code?" ("+p.code+")":""),details:val("rDetails")||null,quantity:num("rQty"),unit:val("rUnit")||null,
+        target_price:num("rTarget"),currency:val("rCur"),incoterm:val("rInco"),destination:val("rDest")||null,needed_by:val("rNeed")||null}).select("id").single();
+      busy(f,false);
+      if(ins.error)return msg(f,"Não foi possível enviar: "+ins.error.message);
+      store("ib-rfq-draft",null);track(sample?"sample_sent":"quote_sent",{product_id:p.id});
+      location.hash="#/pedido/"+ins.data.id;
+    });
+    v.appendChild(h("div",{class:"req"},[pcard(p,specs),f]));
+  }
+  function pcard(p,specs){
+    return h("div",{class:"pcard"},[h("div",{class:"ph"},p.image_path?h("img",{src:IMG+p.image_path,alt:p.name}):null),
+      h("div",{class:"bd"},[h("b",null,p.name),h("div",{class:"muted",style:"font-size:.88rem;margin-top:.3rem"},[p.code?"Código "+p.code+" · ":"","Fornecedor "+p.reference]),
+        specs&&specs.Tamanhos?h("div",{class:"muted",style:"font-size:.88rem"},"Tamanhos: "+specs.Tamanhos):null,
+        h("a",{href:productUrl(p.id),style:"font-size:.88rem"},"Ver produto")])]);
+  }
+
+  // --- Lista de cotação: vários produtos, um envio (um pedido por produto) ---
+  async function quoteList(v){
+    var list=store("ib-quote-list")||[];
+    if(!list.length){v.appendChild(h("div",{class:"card empty",style:"max-width:640px;margin:0 auto"},[h("p",null,"Sua lista de cotação está vazia."),h("a",{class:"btn btn-orange",href:"/marketplace"},"Buscar produtos")]));return;}
+    var r=await sb.from("products").select("id,name,code,image_path,supplier_id,reference,price_unit").in("id",list.map(function(x){return x.id;})).eq("published",true);
+    if(r.error)throw r.error;
+    var prods=r.data,rows=h("div");
+    prods.forEach(function(p){
+      rows.appendChild(h("div",{class:"thread",style:"align-items:center"},[
+        h("div",{class:"th"},p.image_path?h("img",{src:IMG+p.image_path,alt:""}):null),
+        h("div",{class:"tx"},[h("div",{class:"nm"},h("a",{href:productUrl(p.id),style:"color:inherit"},p.name)),h("div",{class:"mt"},"Fornecedor "+p.reference+(p.code?" · Código "+p.code:""))]),
+        h("input",{type:"number",min:"1",step:"any",required:true,placeholder:"Qtd.","data-id":p.id,style:"width:110px","aria-label":"Quantidade de "+p.name}),
+        h("button",{class:"btn btn-ghost btn-sm",type:"button","aria-label":"Remover "+p.name,onclick:function(){store("ib-quote-list",(store("ib-quote-list")||[]).filter(function(x){return x.id!==p.id;}));route();}},"Remover")
+      ]));
+    });
+    var f=h("form",{class:"card"},[
+      h("h1",{style:"font-size:1.35rem"},"Lista de cotação ("+prods.length+")"),
+      h("p",{class:"muted"},"Informe a quantidade de cada produto. Enviamos um pedido para cada um, e você acompanha todos em “Meus orçamentos”."),
+      h("div",{class:"threads",style:"margin-bottom:14px"},rows),
+      h("div",{class:"form2"},[
+        fld("Incoterm",sel("lInco",INCO,"FOB")),
+        fld("Destino (cidade ou porto)",h("input",{id:"lDest",value:buyer.city?buyer.city+"/"+buyer.state:""})),
+        fld("Preciso até",h("input",{id:"lNeed",type:"date"})),
+        h("div",{class:"field full"},[h("label",{for:"lDetails"},"Detalhes para todos os produtos"),h("textarea",{id:"lDetails",placeholder:"Marca própria, embalagem, certificações, cores…"})])
+      ]),
+      h("button",{class:"btn btn-orange",type:"submit"},"Enviar "+prods.length+" pedido"+(prods.length>1?"s":"")),h("p",{class:"err",role:"alert"})
+    ]);
+    f.addEventListener("submit",async function(ev){
+      ev.preventDefault();msg(f);busy(f,true);
+      var val=function(id){return f.querySelector("#"+id).value.trim();},done=0;
+      for(var i=0;i<prods.length;i++){
+        var p=prods[i],q=+f.querySelector('input[data-id="'+p.id+'"]').value;
+        var ins=await sb.from("rfqs").insert({supplier_id:p.supplier_id,buyer_id:buyer.id,product_id:p.id,buyer_label:"Buyer",request_type:"quote",
+          product:p.name+(p.code?" ("+p.code+")":""),details:val("lDetails")||null,quantity:q,unit:p.price_unit||"peças",currency:"USD",
+          incoterm:val("lInco"),destination:val("lDest")||null,needed_by:val("lNeed")||null});
+        if(ins.error){busy(f,false);return msg(f,"Enviados "+done+" de "+prods.length+". Erro: "+ins.error.message);}
+        done++;track("quote_sent",{product_id:p.id});
+        store("ib-quote-list",(store("ib-quote-list")||[]).filter(function(x){return x.id!==p.id;}));
+      }
+      location.hash="#/";
+    });
+    v.appendChild(h("div",{style:"max-width:860px;margin:0 auto"},f));
+  }
+
+  // --- Pedido livre: o comprador descreve o que precisa e a equipe encontra fornecedores ---
+  async function sourcing(v){
+    var d=store("ib-sourcing-draft")||{};
+    var f=h("form",{class:"card form2"},[
+      h("div",{class:"full"},[h("h1",{style:"font-size:1.35rem"},"Pedido de cotação"),
+        h("p",{class:"muted"},"Não achou no marketplace? Descreva o que precisa. Nossa equipe busca fabricantes indianos, confere as condições e traz as cotações para você aqui na sua conta.")]),
+      h("div",{class:"field full"},[h("label",{for:"sTitle"},"O que você procura? *"),h("input",{id:"sTitle",required:true,minlength:"3",maxlength:"200",value:d.title||"",placeholder:"Ex.: Camiseta 100% algodão 180 g/m², marca própria"})]),
+      fld("Quantidade",h("input",{id:"sQty",type:"number",min:"1",step:"any"})),
+      fld("Unidade",h("input",{id:"sUnit",value:"peças"})),
+      fld("Preço-alvo por unidade",h("input",{id:"sTarget",type:"number",min:"0",step:"any"})),
+      fld("Moeda",sel("sCur",CUR,"USD")),
+      fld("Destino (cidade ou porto)",h("input",{id:"sDest",value:buyer.city?buyer.city+"/"+buyer.state:""})),
+      fld("Preciso até",h("input",{id:"sNeed",type:"date"})),
+      h("div",{class:"field full"},[h("label",{for:"sDetails"},"Especificações"),h("textarea",{id:"sDetails",maxlength:"4000",placeholder:"Material, medidas, cores, embalagem, certificações (ex.: INMETRO, ANVISA), frequência de compra…"})]),
+      h("div",{class:"full"},[h("button",{class:"btn btn-orange",type:"submit"},"Enviar pedido de cotação"),h("p",{class:"err",role:"alert"})])
     ]);
     f.addEventListener("submit",async function(ev){
       ev.preventDefault();msg(f);
       var val=function(id){return f.querySelector("#"+id).value.trim();},num=function(id){return val(id)===""?null:+val(id);};
       busy(f,true);
-      var ins=await sb.from("rfqs").insert({supplier_id:p.supplier_id,buyer_id:buyer.id,product_id:p.id,buyer_label:"Buyer",
-        product:p.name+(p.code?" ("+p.code+")":""),details:val("rDetails"),quantity:num("rQty"),unit:val("rUnit")||null,
-        target_price:num("rTarget"),currency:val("rCur"),incoterm:val("rInco"),destination:val("rDest"),needed_by:val("rNeed")||null}).select("id").single();
+      var ins=await sb.from("sourcing_requests").insert({buyer_id:buyer.id,title:val("sTitle"),quantity:num("sQty"),unit:val("sUnit")||null,target_price:num("sTarget"),
+        currency:val("sCur"),destination:val("sDest")||null,needed_by:val("sNeed")||null,details:val("sDetails")||null}).select("id").single();
       busy(f,false);
       if(ins.error)return msg(f,"Não foi possível enviar: "+ins.error.message);
-      location.hash="#/pedido/"+ins.data.id;
+      store("ib-sourcing-draft",null);track("sourcing_sent");
+      location.hash="#/livre/"+ins.data.id;
     });
-    v.appendChild(h("div",{class:"req"},[
-      h("div",{class:"pcard"},[h("div",{class:"ph"},p.image_path?h("img",{src:IMG+p.image_path,alt:p.name}):null),
-        h("div",{class:"bd"},[h("b",null,p.name),h("div",{class:"muted",style:"font-size:.88rem;margin-top:.3rem"},[p.code?"Código "+p.code+" · ":"","Fornecedor "+p.reference]),
-          specs.Tamanhos?h("div",{class:"muted",style:"font-size:.88rem"},"Tamanhos: "+specs.Tamanhos):null,
-          h("a",{href:"/marketplace#/produto/"+p.id,style:"font-size:.88rem"},"Ver produto")])]),
-      f
-    ]));
+    v.appendChild(h("div",{style:"max-width:860px;margin:0 auto"},f));
   }
 
   // --- Mensageiro: lista de pedidos + conversa ---
-  async function messenger(v,openId){
-    var r=await sb.from("rfqs").select("id,code,created_at,updated_at,product,status,product_id,products(image_path,reference)").eq("buyer_id",buyer.id).order("created_at",{ascending:false});
+  async function messenger(v,openId,openSourcing){
+    var r=await sb.from("rfqs").select("id,code,created_at,updated_at,product,status,product_id,request_type,products(image_path,reference)").eq("buyer_id",buyer.id).order("created_at",{ascending:false});
     if(r.error)throw r.error;
-    var list=h("div",{class:"threads"},h("h2",null,"Meus pedidos de orçamento"));
-    if(!r.data.length)list.appendChild(h("div",{class:"empty"},[h("p",null,"Você ainda não pediu orçamentos."),h("a",{class:"btn btn-orange",href:"/marketplace"},"Buscar produtos")]));
+    var sr=await sb.from("sourcing_requests").select("id,code,created_at,title,status").eq("buyer_id",buyer.id).order("created_at",{ascending:false});
+    if(sr.error)throw sr.error;
+    var list=h("div",{class:"threads"},h("h2",{style:"display:flex;justify-content:space-between;gap:.5rem;align-items:center"},["Meus pedidos",h("a",{class:"btn btn-orange btn-sm",href:"#/pedido-livre"},"+ Pedido de cotação")]));
+    if(!r.data.length&&!sr.data.length)list.appendChild(h("div",{class:"empty"},[h("p",null,"Você ainda não pediu orçamentos."),h("a",{class:"btn btn-orange",href:"/marketplace"},"Buscar produtos")]));
+    sr.data.forEach(function(x){
+      var st=SRC[x.status]||[x.status,""];
+      list.appendChild(h("a",{class:"thread",href:"#/livre/"+x.id,"aria-current":x.id===openSourcing?"true":null},[
+        h("div",{class:"th",style:"display:grid;place-items:center;font-size:1.4rem"},"🔎"),
+        h("div",{class:"tx"},[h("div",{class:"nm"},x.title),h("div",{class:"mt"},[h("span",{class:"mono"},x.code),h("span",{class:"pill "+st[1]},st[0])]),h("div",{class:"mt"},"Pedido livre · "+date(x.created_at))])
+      ]));
+    });
     r.data.forEach(function(q){
       var pr=one(q.products)||{};
       list.appendChild(h("a",{class:"thread",href:"#/pedido/"+q.id,"aria-current":q.id===openId?"true":null},[
@@ -337,10 +445,11 @@ dd{margin:0;overflow-wrap:anywhere}
       ]));
     });
     var conv=h("div",{class:"conv"});
-    var box=h("div",{class:"msgr"+(openId?" open":"")},[list,conv]);
+    var box=h("div",{class:"msgr"+(openId||openSourcing?" open":"")},[list,conv]);
     v.appendChild(box);
+    if(openSourcing)return sourcingDetail(conv,openSourcing);
     if(!openId){
-      if(r.data.length&&window.innerWidth>900)return location.replace("#/pedido/"+r.data[0].id);
+      if(window.innerWidth>900&&(r.data.length||sr.data.length))return location.replace(r.data.length?"#/pedido/"+r.data[0].id:"#/livre/"+sr.data[0].id);
       conv.appendChild(h("div",{class:"card empty"},"Escolha um pedido para ver a conversa."));return;
     }
     var q=await sb.from("rfqs").select("*,products(id,image_path,reference,name,code)").eq("id",openId).maybeSingle();
@@ -367,9 +476,25 @@ dd{margin:0;overflow-wrap:anywhere}
       h("div",{class:"card"},[h("h3",null,"Seu pedido"),dl([["Quantidade",q.quantity!=null?q.quantity+" "+(q.unit||""):null],["Preço-alvo",q.target_price!=null?money(q.target_price,q.currency):null],
         ["Incoterm",q.incoterm],["Destino",q.destination],["Preciso até",q.needed_by?date(q.needed_by):null],["Enviado",date(q.created_at)]]),
         q.details?h("p",{style:"margin:.8rem 0 0;white-space:pre-wrap;font-size:.92rem"},q.details):null,
-        pr.id?h("a",{href:"/marketplace#/produto/"+pr.id,style:"display:inline-block;margin-top:.6rem;font-size:.9rem"},"Ver produto no marketplace"):null]),
+        pr.id?h("a",{href:productUrl(pr.id),style:"display:inline-block;margin-top:.6rem;font-size:.9rem"},"Ver produto no marketplace"):null]),
       quotes,
       h("div",{class:"card"},[h("h3",null,"Intermediação India Brasil"),h("p",{class:"muted",style:"margin:0;font-size:.9rem"},"Nossa equipe acompanha esta conversa e ajuda com tradução, negociação e documentação. A plataforma não processa pagamentos.")])
+    ]));
+  }
+
+  async function sourcingDetail(conv,id){
+    var r=await sb.from("sourcing_requests").select("*").eq("id",id).maybeSingle();
+    if(r.error)throw r.error;
+    if(!r.data){conv.appendChild(h("div",{class:"card empty"},"Pedido não encontrado."));return;}
+    var x=r.data,st=SRC[x.status]||[x.status,""];
+    var q=await sb.from("rfqs").select("id,code,product,status").eq("sourcing_id",x.id);
+    conv.appendChild(h("div",{class:"card"},[
+      h("a",{class:"btn btn-ghost btn-sm back",href:"#/"},"← Pedidos"),
+      h("div",{class:"muted mono"},x.code),h("h2",{style:"font-size:1.15rem"},x.title),h("p",null,h("span",{class:"pill "+st[1]},st[0])),
+      dl([["Quantidade",x.quantity!=null?x.quantity+" "+(x.unit||""):null],["Preço-alvo",x.target_price!=null?money(x.target_price,x.currency):null],["Destino",x.destination],["Preciso até",x.needed_by?date(x.needed_by):null],["Enviado",date(x.created_at)]]),
+      x.details?h("p",{style:"white-space:pre-wrap;margin:.8rem 0 0"},x.details):null,
+      h("div",{class:"note",style:"margin-top:1rem"},"Nossa equipe está buscando fabricantes indianos para este pedido. Cada fornecedor encontrado aparece abaixo como uma conversa, com a cotação dele."),
+      q.data&&q.data.length?h("div",null,[h("h3",null,"Fornecedores encontrados"),q.data.map(function(y){return h("a",{class:"thread",href:"#/pedido/"+y.id},[h("div",{class:"tx"},[h("div",{class:"nm"},y.product),h("div",{class:"mt"},[h("span",{class:"mono"},y.code),pill(y.status)])])]);})]):null
     ]));
   }
 

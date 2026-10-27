@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin-orcamentos
+Disallow: /portal
+Disallow: /comprador
+
+Sitemap: https://www.indiabrasil.com.br/sitemap.xml

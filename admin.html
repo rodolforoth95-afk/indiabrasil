@@ -313,7 +313,7 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
       h("b",null,"Marketplace"),
       live?h("span",{class:"pill ok"},live+" produtos no ar"):h("span",{class:"pill"},"Fora do ar"),
       h("span",{class:"muted",style:"flex:1 1 260px"},live?"Os produtos do resumo estão na vitrine. Publicar de novo atualiza com o resumo atual.":"Publica os produtos do resumo na vitrine pública, com fotos, variações e medidas."),
-      h("a",{class:"btn btn-sm btn-ghost",href:"/marketplace#/fornecedor/"+s.id,target:"_blank",rel:"noopener",hidden:live?null:"hidden"},"Ver vitrine"),
+      h("a",{class:"btn btn-sm btn-ghost",href:"/marketplace/fornecedor/"+s.id,target:"_blank",rel:"noopener",hidden:live?null:"hidden"},"Ver vitrine"),
       live?h("button",{class:"btn btn-sm btn-ghost",type:"button",onclick:function(){run("unpublish_catalogue","Tirar os produtos deste fornecedor do marketplace?");}},"Tirar do ar"):null,
       h("button",{class:"btn btn-sm btn-ai",type:"button",onclick:function(){run("publish_catalogue",live?"Atualizar a vitrine com o resumo atual?":"Publicar os produtos deste fornecedor no marketplace?");}},live?"Atualizar vitrine":"Publicar no marketplace")
     ]));
