@@ -377,12 +377,15 @@ footer{text-align:center;color:var(--muted);font-size:.85rem;padding:0 1rem 2rem
   chips("cats",CATS,"categories"); chips("certs",CERTS,"certifications");
 
   // Vindo do formulário da página inicial ("See the demand"): já preenche o que a pessoa informou
-  (function(){
+  // (depois do resto da montagem da página, quando a lista de países já existe)
+  setTimeout(function(){
     var q=new URLSearchParams(location.search),set=function(id,v){var el=document.getElementById(id);if(el&&v&&!el.value)el.value=v;};
+    var ccSel=document.getElementById("cc");
+    if(q.get("cc")&&ccSel.querySelector('option[value="'+q.get("cc").replace(/[^A-Z]/g,"")+'"]')){ccSel.value=q.get("cc");ccSel.dispatchEvent(new Event("change"));}
     set("email",q.get("e"));set("mobile",q.get("m"));set("main_products",q.get("p"));
     var c=q.get("cat");
     if(c)Array.prototype.forEach.call(document.querySelectorAll('input[name="categories"]'),function(i){if(i.value===c)i.checked=true;});
-  })();
+  },0);
 
   var form=document.getElementById("reg"), step=1, TOTAL=4;
   var NAMES=["Company","Contact","Products","Catalogue and review"];
