@@ -67,7 +67,8 @@ pedidos de orçamento (RFQs) de compradores brasileiros.
 Botão "Processar com IA" do /admin: grava um pedido em `catalogue_jobs` (status queued). Nada roda sozinho:
 o dono clica em Run now na tarefa "processar-catalogos-ia" (app Claude no Mac, sem agendamento) ou pede
 "processe a fila" numa conversa. Ela roda `python3 tools/catalogues.py queue`,
-marca `job IB-XXXX processing`, faz os passos 2–4 (o `save` marca done) e, se falhar, `job IB-XXXX error "motivo"`.
+marca `job IB-XXXX processing`, faz os passos 2–5 (resumo + fotos: `save` → `job processing` → `images` → `job done`)
+e, se falhar, `job IB-XXXX error "motivo"`. Depois o dono confere no /admin e clica em "Publicar no marketplace".
 
 Formato (textos em português; nomes de produto, SKUs e atributos como no catálogo; não inventar dados,
 o que não estiver no catálogo fica null e vai para `missing_info`):

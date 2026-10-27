@@ -11,7 +11,7 @@ Comandos:
     python3 tools/catalogues.py save IB-XXX resumo.json
     python3 tools/catalogues.py render IB-XXX    # PDFs -> páginas em JPG + texto (para ler)
     python3 tools/catalogues.py queue            # pedidos do botão "Processar com IA" do /admin
-    python3 tools/catalogues.py job IB-XXX processing|error ["mensagem"]
+    python3 tools/catalogues.py job IB-XXX processing|error|done ["mensagem"]
     python3 tools/catalogues.py images IB-XXX    # fotos dos produtos (página do catálogo) -> marketplace
     python3 tools/catalogues.py sitemap          # gera sitemap.xml com os produtos publicados (commit + push)
     python3 tools/catalogues.py publish IB-XXX   # coloca o resumo no marketplace (igual ao botão do /admin)
@@ -201,8 +201,8 @@ def cmd_queue():
 
 
 def cmd_job(ref, status, error=None):
-    if status not in ("processing", "error"):
-        sys.exit("status deve ser processing ou error")
+    if status not in ("processing", "error", "done"):
+        sys.exit("status deve ser processing, error ou done")
     set_job(ref, status, error)
     print("%s: %s" % (ref, status))
 

@@ -288,10 +288,10 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
 
     var again=function(){if(location.hash==="#/"+ref)renderDetail(ref).catch(fail);};
     var msg=!hasCat(s)?"Este fornecedor não enviou catálogo.":
-      job&&job.status==="queued"?"Na fila desde "+new Date(job.requested_at).toLocaleString("pt-BR")+". Para processar: no app do Claude no Mac, abra Scheduled → “India Brazil – Processar catálogos com IA” → Run now. Depois recarregue esta página.":
+      job&&job.status==="queued"?"Na fila desde "+new Date(job.requested_at).toLocaleString("pt-BR")+". Agora, no app do Claude no Mac: Scheduled → “India Brazil – Processar catálogos com IA” → Run now. A IA transcreve o catálogo inteiro e recorta as fotos; quando terminar, recarregue esta página, confira o resumo e clique em “Publicar no marketplace”.":
       job&&job.status==="processing"?"O Claude está lendo o catálogo. Catálogos grandes levam alguns minutos; recarregue a página para ver o resultado.":
       job&&job.status==="error"?"A última tentativa falhou: "+(job.error||"erro desconhecido")+".":
-      m.data?"Gerar o resumo de novo substitui o atual.":"O Claude lê o catálogo inteiro e monta o resumo padronizado.";
+      m.data?"Gerar o resumo de novo substitui o atual.":"Passo 1: o Claude lê o catálogo inteiro, transcreve todos os produtos e variações e recorta as fotos. Passo 2: você confere aqui e publica no marketplace.";
     d.appendChild(h("div",{class:"card",style:"margin-bottom:16px"},h("div",{class:"ai"},[
       h("b",null,"Resumo com IA"),jobPill(job),h("span",{class:"muted",style:"flex:1 1 260px"},msg),aiButton(s,job,again)
     ])));
