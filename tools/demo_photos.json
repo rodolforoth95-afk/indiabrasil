@@ -1,0 +1,77 @@
+{
+ "basmati": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f8/Basmati_Rice_India%2C_raw.jpg/960px-Basmati_Rice_India%2C_raw.jpg",
+  "credit": "cookbookman17 · CC BY 2.0 · Wikimedia Commons",
+  "page": "https://commons.wikimedia.org/wiki/File:Basmati_Rice_India,_raw.jpg"
+ },
+ "bearing": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/68/Zirconium_dioxide_ZrO2_bearing_balls.jpg/960px-Zirconium_dioxide_ZrO2_bearing_balls.jpg",
+  "credit": "Lucasbosch · CC BY-SA 3.0 · Wikimedia Commons",
+  "page": "https://commons.wikimedia.org/wiki/File:Zirconium_dioxide_ZrO2_bearing_balls.jpg"
+ },
+ "cardamom": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/Green_Cardamom_Pods.jpg/960px-Green_Cardamom_Pods.jpg",
+  "credit": "Misterneedlemouse · CC0 · Wikimedia Commons",
+  "page": "https://commons.wikimedia.org/wiki/File:Green_Cardamom_Pods.jpg"
+ },
+ "cashew": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/CASHEW_NUTS.jpg/960px-CASHEW_NUTS.jpg",
+  "credit": "Ranjithkumar Murugesan · CC0 · Wikimedia Commons",
+  "page": "https://commons.wikimedia.org/wiki/File:CASHEW_NUTS.jpg"
+ },
+ "ceramic": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3e/Blue_Pottery%2C_Jaipur_School_of_Art.jpg/960px-Blue_Pottery%2C_Jaipur_School_of_Art.jpg",
+  "credit": "Neek-Theri · CC BY-SA 4.0 · Wikimedia Commons",
+  "page": "https://commons.wikimedia.org/wiki/File:Blue_Pottery,_Jaipur_School_of_Art.jpg"
+ },
+ "cumin": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/Seeds_of_Cumin.jpg/960px-Seeds_of_Cumin.jpg",
+  "credit": "Sanjay Acharya · CC BY-SA 4.0 · Wikimedia Commons",
+  "page": "https://commons.wikimedia.org/wiki/File:Seeds_of_Cumin.jpg"
+ },
+ "incense": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/21/Incense_in_Vietnam.jpg/960px-Incense_in_Vietnam.jpg",
+  "credit": "Trantuanviet · CC BY-SA 4.0 · Wikimedia Commons",
+  "page": "https://commons.wikimedia.org/wiki/File:Incense_in_Vietnam.jpg"
+ },
+ "oil": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/Essential_oil_kit.jpg/960px-Essential_oil_kit.jpg",
+  "credit": "Vanilla and lace · CC BY 2.0 · Wikimedia Commons",
+  "page": "https://commons.wikimedia.org/wiki/File:Essential_oil_kit.jpg"
+ },
+ "pump": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/01/Water_pump_2.jpg/960px-Water_pump_2.jpg",
+  "credit": "Killarnee · CC BY-SA 4.0 · Wikimedia Commons",
+  "page": "https://commons.wikimedia.org/wiki/File:Water_pump_2.jpg"
+ },
+ "sheets": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/Sheet%2C_bed_%282%29_%28AM_1991.288-5%29.jpg/960px-Sheet%2C_bed_%282%29_%28AM_1991.288-5%29.jpg",
+  "credit": "Farmer's Trading Company · CC BY 4.0 · Wikimedia Commons",
+  "page": "https://commons.wikimedia.org/wiki/File:Sheet,_bed_(2)_(AM_1991.288-5).jpg"
+ },
+ "shoes": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1f/Leather_boots_men%27s.jpg/960px-Leather_boots_men%27s.jpg",
+  "credit": "Petar Milošević · CC BY-SA 4.0 · Wikimedia Commons",
+  "page": "https://commons.wikimedia.org/wiki/File:Leather_boots_men%27s.jpg"
+ },
+ "soap": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f7/Aleppo_soap_01.jpg/960px-Aleppo_soap_01.jpg",
+  "credit": "Bernard Gagnon · CC BY-SA 3.0 · Wikimedia Commons",
+  "page": "https://commons.wikimedia.org/wiki/File:Aleppo_soap_01.jpg"
+ },
+ "tea": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/Assam-Tee_SFTGFOP1.jpg/960px-Assam-Tee_SFTGFOP1.jpg",
+  "credit": "soultea.de/André Helbig · CC BY-SA 3.0 · Wikimedia Commons",
+  "page": "https://commons.wikimedia.org/wiki/File:Assam-Tee_SFTGFOP1.jpg"
+ },
+ "turmeric": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Grounded_turmeric.jpg/960px-Grounded_turmeric.jpg",
+  "credit": "Barbara-Ingeborg · CC BY-SA 4.0 · Wikimedia Commons",
+  "page": "https://commons.wikimedia.org/wiki/File:Grounded_turmeric.jpg"
+ },
+ "wrench": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/Mechanic%27s_tool_set_with_three_socket_wrenches_and_a_variety_of_sockets_from_Blackhawk_%28cropped%29.jpg/960px-Mechanic%27s_tool_set_with_three_socket_wrenches_and_a_variety_of_sockets_from_Blackhawk_%28cropped%29.jpg",
+  "credit": "J.C. Fields (Talk) (Uploads) · CC BY-SA 3.0 · Wikimedia Commons",
+  "page": "https://commons.wikimedia.org/wiki/File:Mechanic%27s_tool_set_with_three_socket_wrenches_and_a_variety_of_sockets_from_Blackhawk_(cropped).jpg"
+ }
+}
