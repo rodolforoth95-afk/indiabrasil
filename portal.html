@@ -696,7 +696,7 @@ a.row:hover{background:var(--chip)}
   }
 
   // ---------- Enquiries ----------
-  var FILTERS=[["","All"],["todo","Needs you"],["quoted","Quotation sent"],["neg","In negotiation"],["order","Orders in progress"],["done","Closed"]];
+  var FILTERS=[["","All"],["todo","Needs you"],["quoted","Quotation sent"],["neg","In negotiation"],["order","Confirmed orders"],["done","Closed"]];
   function inFilter(r,f){var x=sit(r);return !f||(f==="todo"?needsAction().indexOf(r)>-1:x.k===f);}
   function viewEnquiries(f){
     var list=S.rfqs.filter(function(r){return inFilter(r,f);});
@@ -726,7 +726,7 @@ a.row:hover{background:var(--chip)}
     var mine=await sb.from("rfq_messages").select("id",{count:"exact",head:true}).eq("rfq_id",r.id).eq("sender_role","supplier");
     var quotes=qs.data,s=sit(r),closed=["won","lost","closed"].indexOf(r.status)>-1,replied=quotes.length>0||(mine.count||0)>0;
 
-    // From enquiry to delivery (OrderFlow skips advance/balance when the proforma has none)
+    // From enquiry to order confirmed (OrderFlow); after that, only the chat
     function drawBar(rr){
       var st=OrderFlow.bar(rr,"supplier",{replied:replied,quoted:quotes.length>0});
       return h("ol",{class:"journey of-bar",style:"grid-template-columns:repeat("+st.length+",minmax(80px,1fr))"},st.map(function(x,i){

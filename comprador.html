@@ -521,7 +521,7 @@ a.row:hover{background:var(--chip)}
         h("a",{class:"kpi"+(newQ?" hot":""),href:"#/pedidos?f=quote"},[h("b",null,String(c.quote)),h("span",null,"com cotação recebida"+(newQ?" ("+newQ+" nova"+(newQ>1?"s":"")+")":""))]),
         h("a",{class:"kpi",href:"#/pedidos?f=wait"},[h("b",null,String(c.wait+c.reply)),h("span",null,"aguardando cotação")]),
         h("a",{class:"kpi",href:"#/pedidos?f=neg"},[h("b",null,String(c.neg)),h("span",null,"em negociação")]),
-        h("a",{class:"kpi"+(S.rfqs.some(function(r){return sit(r).turn;})?" hot":""),href:"#/pedidos?f=order"},[h("b",null,String(c.order)),h("span",null,"pedidos em andamento")])
+        h("a",{class:"kpi",href:"#/pedidos?f=order"},[h("b",null,String(c.order)),h("span",null,"pedidos confirmados")])
       ]),
       h("div",{class:"grid2"},[
         h("div",{class:"card",style:"padding:0"},[h("div",{style:"padding:16px 16px 4px"},h("h2",null,attention.length?"Precisa da sua atenção":"Pedidos recentes")),
@@ -535,13 +535,13 @@ a.row:hover{background:var(--chip)}
         ])]),
         h("div",{class:"card",style:"margin-top:14px"},[h("h3",null,"Como funciona"),h("ol",{style:"margin:.3rem 0 0;padding-left:1.1rem;color:var(--muted);font-size:.92rem;display:grid;gap:.35rem"},[
           h("li",null,"Você pede o orçamento (ou amostra) pelo marketplace."),h("li",null,"O fornecedor responde no chat do pedido e envia a cotação."),
-          h("li",null,"Você aceita para negociar ou pede ajuste."),h("li",null,"Com a proforma aprovada, o pedido segue aqui passo a passo: sinal, produção, embarque, saldo e recebimento, com nosso apoio.")])])])
+          h("li",null,"Você aceita para negociar ou pede ajuste."),h("li",null,"O fornecedor envia a proforma; você aprova e o pedido fica confirmado. Pagamento, produção e embarque seguem pelo chat, com nosso apoio.")])])])
       ])
     ]);
   }
 
   // ---------- Pedidos ----------
-  var FILTERS=[["","Todos"],["wait","Aguardando fornecedor"],["quote","Cotação recebida"],["neg","Em negociação"],["order","Em andamento"],["done","Encerrados"]];
+  var FILTERS=[["","Todos"],["wait","Aguardando fornecedor"],["quote","Cotação recebida"],["neg","Em negociação"],["order","Pedidos confirmados"],["done","Encerrados"]];
   function viewOrders(f){
     var match=function(r){var k=sit(r).k;return !f||(f==="wait"?k==="wait"||k==="reply":k===f);};
     var list=S.rfqs.filter(match);
@@ -574,7 +574,7 @@ a.row:hover{background:var(--chip)}
     var replied=!!(quotes.length||(ib.last_role&&ib.last_role!=="buyer")),closed=["won","lost","closed"].indexOf(r.status)>-1;
 
     // Linha do tempo do pedido
-    // Linha do tempo: do pedido ao recebimento (OrderFlow decide as etapas conforme a proforma)
+    // Linha do tempo: do pedido enviado ao pedido confirmado (OrderFlow)
     function drawBar(rr){
       var st=OrderFlow.bar(rr,"buyer",{replied:replied,quoted:quotes.length>0});
       return h("ol",{class:"steps of-bar",style:"grid-template-columns:repeat("+st.length+",minmax(78px,1fr))"},st.map(function(x,i){
@@ -601,7 +601,7 @@ a.row:hover{background:var(--chip)}
       :["⏳","Aguardando o fornecedor","Avisaremos aqui quando ele responder. Enquanto isso, envie detalhes, fotos ou especificações pelo chat: isso acelera a cotação."];
     var next=h("div",{class:"card next"},[h("h3",null,[h("span",null,nextTxt[0]),nextTxt[1]]),h("p",{style:"margin:0"},nextTxt[2]),
       !closed?h("div",{style:"margin-top:.8rem"},h("button",{class:"btn btn-danger btn-sm",type:"button",onclick:function(){if(confirm("Encerrar este pedido? O fornecedor será avisado pelo chat."))setStatus("closed","Encerrei este pedido. Obrigado pelo retorno.");}},"Encerrar pedido")):null]);
-    // Depois da cotação aceita, o próximo passo vem da jornada do pedido (proforma → sinal → produção → embarque → saldo → recebimento)
+    // Depois da cotação aceita, o próximo passo vem da jornada do pedido (proforma → aprovação = pedido confirmado; depois só o chat)
     var flowBox=h("div",null,OrderFlow.has(r)?flowEl(r):next);
     function flowEl(rr){return OrderFlow.mount({sb:sb,rfq:rr,me:"buyer",chat:chat,onError:fail,
       onChange:function(){loadData().then(function(){return viewOrder(rr.id);}).catch(fail);}}).el;}

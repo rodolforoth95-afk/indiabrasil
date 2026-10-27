@@ -5,21 +5,12 @@
 -- Como usar: Supabase > SQL Editor > New query > cole tudo > Run
 --
 -- Etapas (rfqs.order_stage), sempre começando com a cotação aceita (status 'negotiating'):
---   (vazio)           negociando; o fornecedor envia a proforma (send_pi)
---   pi_sent           proforma enviada: o comprador aprova (approve_pi) ou pede ajuste (request_changes)
---   pi_changes        comprador pediu ajuste: o fornecedor envia proforma nova
---   awaiting_advance  pedido confirmado (status 'won'): o comprador paga o sinal (advance_paid)
---   advance_sent      comprador informou o sinal: o fornecedor confirma (confirm_advance) ou diz que não chegou
---   in_production     em produção: o fornecedor avisa que ficou pronto, com fotos (goods_ready)
---   ready             mercadoria pronta: o comprador aprova (approve_goods) ou pede correção (request_fix)
---   ready_to_ship     aprovada: o fornecedor embarca e envia documentos (shipped)
---   awaiting_balance  embarcado: o comprador paga o saldo (balance_paid)
---   balance_sent      comprador informou o saldo: o fornecedor confirma e libera os documentos (confirm_balance)
---   in_transit        a caminho: o comprador confirma o recebimento e avalia (received)
---   completed         concluído
---   cancelled         cancelado antes de qualquer pagamento (cancel)
--- Sem sinal (0%) pula as etapas do sinal; sem saldo (100% antecipado) pula as do saldo.
--- A qualquer momento: report_issue (comprador ou fornecedor) avisa a equipe; a equipe usa resolve_issue e set_stage.
+--   (vazio)     negociando; o fornecedor envia a proforma (send_pi)
+--   pi_sent     proforma enviada: o comprador aprova (approve_pi) ou pede ajuste (request_changes)
+--   pi_changes  comprador pediu ajuste: o fornecedor envia proforma nova
+--   completed   pedido confirmado (status 'won'). Daqui em diante pagamento, produção e embarque seguem só pelo chat.
+--   cancelled   cancelado antes da confirmação (cancel)
+-- A qualquer momento antes da confirmação: report_issue avisa a equipe; a equipe usa resolve_issue e set_stage.
 -- Cada passo grava uma mensagem no chat do pedido (com o anexo, se houver) e um registro em rfq_order_events.
 -- =====================================================================
 
@@ -76,8 +67,7 @@ declare
   nxt text;
   d jsonb := coalesce(p_data, '{}'::jsonb);
   od jsonb;
-  adv numeric;
-  pre_pay constant text[] := array['pi_sent','pi_changes','awaiting_advance'];
+  pre_pay constant text[] := array['pi_sent','pi_changes'];
 begin
   select * into r from public.rfqs where id = p_rfq for update;
   if not found then raise exception 'Order not found'; end if;
@@ -91,7 +81,6 @@ begin
 
   st := r.order_stage;
   od := r.order_data;
-  adv := coalesce((od #>> '{pi,advance_pct}')::numeric, 0);
 
   if p_attachment_path is not null and p_attachment_path not like r.id::text || '/%' then
     raise exception 'Invalid attachment';
@@ -116,73 +105,18 @@ begin
   elsif p_action = 'approve_pi' then
     if who = 'supplier' then raise exception 'not allowed'; end if;
     if st is distinct from 'pi_sent' then raise exception 'There is no proforma waiting for approval'; end if;
-    nxt := case when adv > 0 then 'awaiting_advance' else 'in_production' end;
-    od := jsonb_set(od, '{confirmed_at}', to_jsonb(now()));
-
-  elsif p_action = 'advance_paid' then
-    if who = 'supplier' then raise exception 'not allowed'; end if;
-    if st is distinct from 'awaiting_advance' then raise exception 'No advance payment pending'; end if;
-    nxt := 'advance_sent';
-
-  elsif p_action = 'confirm_advance' then
-    if who = 'buyer' then raise exception 'not allowed'; end if;
-    if st is distinct from 'advance_sent' then raise exception 'No advance payment to confirm'; end if;
-    if d ? 'ready_by' then od := jsonb_set(od, '{ready_by}', d->'ready_by'); end if;
-    nxt := 'in_production';
-
-  elsif p_action = 'payment_not_received' then
-    if who = 'buyer' then raise exception 'not allowed'; end if;
-    if st = 'advance_sent' then nxt := 'awaiting_advance';
-    elsif st = 'balance_sent' then nxt := 'awaiting_balance';
-    else raise exception 'No payment to check'; end if;
-
-  elsif p_action = 'goods_ready' then
-    if who = 'buyer' then raise exception 'not allowed'; end if;
-    if st is distinct from 'in_production' then raise exception 'The order is not in production'; end if;
-    nxt := 'ready';
-
-  elsif p_action = 'request_fix' then
-    if who = 'supplier' then raise exception 'not allowed'; end if;
-    if st is distinct from 'ready' then raise exception 'There are no goods waiting for approval'; end if;
-    if coalesce(btrim(p_note), '') = '' then raise exception 'Tell what needs to be fixed'; end if;
-    nxt := 'in_production';
-
-  elsif p_action = 'approve_goods' then
-    if who = 'supplier' then raise exception 'not allowed'; end if;
-    if st is distinct from 'ready' then raise exception 'There are no goods waiting for approval'; end if;
-    nxt := 'ready_to_ship';
-
-  elsif p_action = 'shipped' then
-    if who = 'buyer' then raise exception 'not allowed'; end if;
-    if st is distinct from 'ready_to_ship' then raise exception 'The buyer has not approved the goods yet'; end if;
-    od := jsonb_set(od, '{shipping}', d || jsonb_build_object('at', now()));
-    nxt := case when adv < 100 then 'awaiting_balance' else 'in_transit' end;
-
-  elsif p_action = 'balance_paid' then
-    if who = 'supplier' then raise exception 'not allowed'; end if;
-    if st is distinct from 'awaiting_balance' then raise exception 'No balance payment pending'; end if;
-    nxt := 'balance_sent';
-
-  elsif p_action = 'confirm_balance' then
-    if who = 'buyer' then raise exception 'not allowed'; end if;
-    if st is distinct from 'balance_sent' then raise exception 'No balance payment to confirm'; end if;
-    nxt := 'in_transit';
-
-  elsif p_action = 'received' then
-    if who = 'supplier' then raise exception 'not allowed'; end if;
-    if st is distinct from 'in_transit' then raise exception 'The order is not in transit'; end if;
-    if d ? 'rating' and coalesce((d->>'rating')::int, 0) not between 1 and 5 then raise exception 'Rating must be 1 to 5'; end if;
-    od := jsonb_set(od, '{review}', d || jsonb_build_object('at', now()));
     nxt := 'completed';
+    od := jsonb_set(od, '{confirmed_at}', to_jsonb(now()));
 
   elsif p_action = 'cancel' then
     if not (coalesce(st, '') = '' and r.status = 'negotiating' or st = any(pre_pay)) then
-      raise exception 'After a payment, ask the India Brasil team to cancel'; end if;
+      raise exception 'A confirmed order can only be cancelled by the India Brasil team'; end if;
     if coalesce(btrim(p_note), '') = '' then raise exception 'Tell the reason'; end if;
     nxt := 'cancelled';
 
   elsif p_action = 'report_issue' then
     if coalesce(btrim(p_note), '') = '' then raise exception 'Describe the problem'; end if;
+    if st in ('completed', 'cancelled') then raise exception 'Use the chat for this order'; end if;
     nxt := st;
     update public.rfqs set order_issue = true where id = r.id;
 
@@ -194,6 +128,7 @@ begin
   elsif p_action = 'set_stage' then
     if who <> 'team' then raise exception 'not allowed'; end if;
     nxt := nullif(d->>'stage', '');
+    if nxt is not null and nxt not in ('pi_sent','pi_changes','completed','cancelled') then raise exception 'Invalid stage'; end if;
 
   else
     raise exception 'Unknown action';
@@ -204,8 +139,7 @@ begin
     order_data  = od,
     status = case
       when nxt = 'cancelled' then 'closed'
-      when nxt in ('awaiting_advance','advance_sent','in_production','ready','ready_to_ship',
-                   'awaiting_balance','balance_sent','in_transit','completed') then 'won'
+      when nxt = 'completed' then 'won'
       when p_action = 'set_stage' and (nxt is null or nxt in ('pi_sent','pi_changes')) then 'negotiating'
       else status end,
     updated_at = now()
