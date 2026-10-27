@@ -4,3 +4,4 @@ node_modules/
 .vercel
 catalogues/
 __pycache__/
+*.local.txt

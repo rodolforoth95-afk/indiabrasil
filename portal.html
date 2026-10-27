@@ -220,6 +220,9 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
   var CUR=["USD","INR","EUR","BRL"], INCO=["FOB","CIF","CFR","EXW","FCA","DAP","DDP"];
 
   // Sessão guardada separada da do /admin: entrar no portal não derruba o login de administrador
+  // 2FA (código do app autenticador) desligado por enquanto. Para religar: REQUIRE_2FA=true aqui
+  // e rodar de novo a função has_2fa() do docs/portal-setup.sql no Supabase.
+  var REQUIRE_2FA=false;
   var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{storageKey:"ib-portal-auth"}});
   var $=function(id){return document.getElementById(id);};
   var VIEWS=["vSignin","vSignup","vForgot","vEnroll","vChallenge","vNewpass","vApp","vNone"];
@@ -319,9 +322,9 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
     if(!s){$("who").hidden=true;show(recovering?"vForgot":"vSignin");return;}
     $("whoEmail").textContent=s.user.email;$("who").hidden=false;
     var fs=(await sb.auth.mfa.listFactors()).data||{all:[],totp:[]};
-    if(!fs.totp.length)return enroll(fs);
+    if(REQUIRE_2FA&&!fs.totp.length)return enroll(fs);
     var aal=(await sb.auth.mfa.getAuthenticatorAssuranceLevel()).data;
-    if(aal.currentLevel!=="aal2")return show("vChallenge");
+    if(REQUIRE_2FA&&aal.currentLevel!=="aal2")return show("vChallenge");
     if(recovering)return show("vNewpass");
     loadApp(s.user).catch(fail);
   }
@@ -546,8 +549,8 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
       f.reset();msg(f,"","Password changed.");
     });
     p.appendChild(h("div",{class:"grid"},[
-      h("div",{class:"card"},[h("h3",null,"Sign-in details"),dl([["Email",me.email],["Two-step verification",h("span",{class:"pill good"},"On")],["Authenticator added",fs.totp[0]?date(fs.totp[0].created_at):"–"]]),
-        h("p",{class:"hint",style:"margin-top:1rem"},"Changed phones? Contact us on WhatsApp and we will reset your two-step verification after confirming your identity.")]),
+      h("div",{class:"card"},[h("h3",null,"Sign-in details"),dl([["Email",me.email],["Two-step verification",REQUIRE_2FA?h("span",{class:"pill good"},"On"):h("span",{class:"pill"},"Off")]].concat(REQUIRE_2FA?[["Authenticator added",fs.totp[0]?date(fs.totp[0].created_at):"–"]]:[])),
+        REQUIRE_2FA?h("p",{class:"hint",style:"margin-top:1rem"},"Changed phones? Contact us on WhatsApp and we will reset your two-step verification after confirming your identity."):null]),
       h("div",{class:"card"},[h("h3",null,"Change password"),f])
     ]));
   }
