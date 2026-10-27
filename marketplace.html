@@ -81,7 +81,9 @@ header{background:var(--navy);color:#fff;position:sticky;top:0;z-index:20;box-sh
 .nav .rfq{margin-left:auto;color:var(--orange);font-weight:700}
 @media (max-width:820px){.bar{flex-wrap:wrap;height:auto;padding:10px 0;gap:10px}.search{order:3;flex-basis:100%;max-width:none}.links{margin-left:auto}.links .hide-sm{display:none}}
 
-main{padding:20px 0 70px;min-height:60vh}
+/* "main" também tem a classe .wrap (que zera o espaço vertical): por isso o seletor main.wrap */
+main.wrap{padding-top:36px;padding-bottom:70px;min-height:60vh}
+@media (max-width:820px){main.wrap{padding-top:22px}}
 
 /* Hero com cotação */
 .hero{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.85fr);gap:18px;margin-bottom:18px}
