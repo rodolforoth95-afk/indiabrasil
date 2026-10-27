@@ -19,7 +19,9 @@ pedidos de orçamento (RFQs) de compradores brasileiros.
 - docs/buyer-account.sql – `rfq_reads` (lido/não lido), `buyer_inbox()`, `buyer_set_rfq_status()`, `buyers.job_title`
 - docs/marketplace-benchmark.md – referências B2B (Alibaba, IndiaMART…), o que adotamos e próximas fases
 - sitemap.xml / robots.txt – gerar de novo com `python3 tools/catalogues.py sitemap` sempre que publicar produtos
-- assets/js/rfq-chat.js – conversa B2B compartilhada (portal, comprador, admin-orcamentos): tempo real + anexos
+- assets/js/rfq-chat.js – conversa B2B compartilhada (portal, comprador, admin-orcamentos): tempo real, anexos e fotos
+  (botão 📷, colar, arrastar), idioma escolhido por pessoa e tradução automática (MyMemory, grátis, cache no navegador)
+- docs/chat-languages.sql – coluna `rfq_messages.lang` (idioma em que cada mensagem foi escrita)
 - tools/catalogues.py – baixa catálogos e salva resumos (usa SUPABASE_SECRET_KEY do .env, nunca vai para o site)
 - assets/logo – logos SVG (globo laranja/verde com seta, texto branco)
 - docs/supabase-setup.sql – schema do banco (não é servido no site)
