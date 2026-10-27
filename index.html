@@ -243,10 +243,7 @@ details p{margin:.6rem 0 0;color:var(--muted)}
 .lead-step{font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#0B7A55;margin:0 0 .25rem}
 .lead-q{font-size:1.2rem;font-weight:700;margin:0 0 .8rem;color:#0F1A3D}
 .lead-chips{display:grid;grid-template-columns:1fr 1fr;gap:.55rem}
-.lead-hint{font-size:.8rem;color:#5A6178;margin:-.45rem 0 .6rem}
-.lead-chips small{display:block;font-size:.74rem;font-weight:500;color:#0B7A55;margin-top:.1rem}
-.lead-chips button[aria-pressed="true"] small{color:#7A4300}
-.lead-chips button{font:inherit;font-weight:600;font-size:.92rem;line-height:1.2;padding:.55rem .5rem;border-radius:14px;border:1.5px solid #DCE0E8;background:#fff;color:#151A2D;cursor:pointer}
+.lead-chips button{font:inherit;font-weight:600;font-size:.92rem;line-height:1.25;padding:.7rem .5rem;border-radius:999px;border:1.5px solid #DCE0E8;background:#fff;color:#151A2D;cursor:pointer}
 .lead-chips button:hover{border-color:var(--saffron)}
 .lead-chips button[aria-pressed="true"]{background:#FFF1DE;border-color:var(--saffron);color:#7A4300}
 .lead-card .btn{width:100%;margin-top:1rem;padding:1rem;font-size:1.05rem}
@@ -254,10 +251,26 @@ details p{margin:.6rem 0 0;color:var(--muted)}
 .lead-card label{color:#151A2D}
 .lead-card input{width:100%;font:inherit;color:#151A2D;background:#fff;border:1.5px solid #DCE0E8;border-radius:10px;padding:.7rem .85rem}
 .lead-card input:focus{border-color:var(--focus);outline:none;box-shadow:0 0 0 3px rgba(47,111,237,.2)}
-.lead-card .phone .cc{position:relative;flex:none;display:flex;align-items:center;gap:.35rem;padding:0 .7rem;border:1.5px solid #DCE0E8;border-right:0;border-radius:10px 0 0 10px;background:#F7F8FB;color:#151A2D;font-weight:500;white-space:nowrap}
-.lead-card .phone .cc:after{content:"";width:.45rem;height:.45rem;border:solid #5A6178;border-width:0 1.5px 1.5px 0;transform:translateY(-25%) rotate(45deg);margin-left:.15rem}
-.lead-card .phone .cc select{position:absolute;inset:0;width:100%;opacity:0;cursor:pointer;padding:0;border:0}
-.lead-card .phone .cc:has(select:focus-visible){outline:3px solid var(--focus);outline-offset:2px}
+/* Telefone: um campo só, com o código do país à esquerda (como os formulários de bancos e apps) */
+.lead-card .tel{position:relative;display:flex;border:1.5px solid #DCE0E8;border-radius:10px;background:#fff}
+.lead-card .tel:focus-within{border-color:var(--focus);box-shadow:0 0 0 3px rgba(47,111,237,.2)}
+.lead-card .tel>input{border:0;border-radius:0 10px 10px 0;box-shadow:none;min-width:0;flex:1}
+.lead-card .tel>input:focus{box-shadow:none}
+.cc-btn{display:flex;align-items:center;gap:.45rem;flex:none;font:inherit;font-weight:600;color:#151A2D;background:#F7F8FB;border:0;border-right:1.5px solid #DCE0E8;border-radius:9px 0 0 9px;padding:0 .75rem;cursor:pointer}
+.cc-btn:hover{background:#EEF1F6}
+.cc-btn img{width:22px;height:16px;border-radius:2px;object-fit:cover;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+.cc-btn svg{width:11px;height:8px;color:#5A6178;transition:transform .15s}
+.cc-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
+.cc-pop{position:absolute;left:-1.5px;right:-1.5px;top:calc(100% + 6px);z-index:30;background:#fff;border:1px solid #DCE0E8;border-radius:12px;box-shadow:0 18px 40px rgba(15,26,61,.18);padding:.5rem}
+.cc-pop input{width:100%;font:inherit;font-size:.95rem;border:1.5px solid #DCE0E8;border-radius:8px;padding:.55rem .7rem;margin-bottom:.35rem}
+.cc-pop ul{list-style:none;margin:0;padding:0;max-height:230px;overflow-y:auto}
+.cc-pop li{display:flex;align-items:center;gap:.6rem;padding:.5rem .55rem;border-radius:8px;cursor:pointer;font-size:.95rem;color:#151A2D}
+.cc-pop li img{width:22px;height:16px;border-radius:2px;object-fit:cover;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+.cc-pop li span{flex:1}
+.cc-pop li b{font-weight:500;color:#5A6178}
+.cc-pop li:hover,.cc-pop li.on{background:#FFF1DE}
+.cc-pop li[aria-selected="true"]{font-weight:600}
+.cc-pop .none{color:#5A6178;font-size:.9rem;padding:.5rem}
 .lead-card .phone input{border-radius:0 10px 10px 0}
 .lead-note{text-align:center;color:#5A6178;font-size:.85rem;margin:.8rem 0 0}
 .lead-err{color:#B42318;font-size:.88rem;margin:.5rem 0 0}
@@ -375,18 +388,17 @@ footer a{color:#fff}
         <div data-lead="1">
           <p class="lead-step">Step 1 · Your product</p>
           <p class="lead-q" id="lead-q1">What do you manufacture?</p>
-          <p class="lead-hint">Top Indian exports to Brazil, 2024</p>
           <div class="lead-chips" role="group" aria-labelledby="lead-q1">
-            <button type="button" data-c="chemicals">Chemicals &amp; dyes<small>US$ 1.79 bn</small></button>
-            <button type="button" data-c="fuels">Fuels &amp; oils<small>US$ 792 mn</small></button>
-            <button type="button" data-c="machinery">Machinery &amp; boilers<small>US$ 674 mn</small></button>
-            <button type="button" data-c="auto">Auto parts &amp; vehicles<small>US$ 650 mn</small></button>
-            <button type="button" data-c="pharma">Pharma &amp; APIs<small>US$ 472 mn</small></button>
-            <button type="button" data-c="rubber">Rubber &amp; plastics<small>US$ 211 mn</small></button>
-            <button type="button" data-c="electrical">Electrical equipment<small>US$ 186 mn</small></button>
-            <button type="button" data-c="steel">Iron, steel &amp; metals<small>US$ 155 mn</small></button>
-            <button type="button" data-c="textiles">Textiles &amp; yarn<small>US$ 144 mn</small></button>
-            <button type="button" data-c="other">Other products<small>All categories</small></button>
+            <button type="button" data-c="chemicals">Chemicals &amp; dyes</button>
+            <button type="button" data-c="fuels">Fuels &amp; oils</button>
+            <button type="button" data-c="machinery">Machinery &amp; boilers</button>
+            <button type="button" data-c="auto">Auto parts &amp; vehicles</button>
+            <button type="button" data-c="pharma">Pharma &amp; APIs</button>
+            <button type="button" data-c="rubber">Rubber &amp; plastics</button>
+            <button type="button" data-c="electrical">Electrical equipment</button>
+            <button type="button" data-c="steel">Iron, steel &amp; metals</button>
+            <button type="button" data-c="textiles">Textiles &amp; yarn</button>
+            <button type="button" data-c="other">Other products</button>
           </div>
           <p class="lead-err" id="leadErr1" role="alert"></p>
           <button class="btn btn-saffron" type="button" id="leadNext">Continue →</button>
@@ -397,7 +409,16 @@ footer a{color:#fff}
           <div class="demand" aria-live="polite"><b id="demandVal"></b><span id="demandTxt"></span></div>
           <p class="lead-q">Where should we send matching RFQs?</p>
           <div class="lf"><label for="leadProduct">Your main product</label><input id="leadProduct" maxlength="300" placeholder="e.g. stainless steel ball valves"></div>
-          <div class="lf"><label for="leadMobile">WhatsApp number</label><div class="phone"><span class="cc"><span id="leadCcShow" aria-hidden="true">🇮🇳 +91</span><select id="leadCc" aria-label="Country code"></select></span><input id="leadMobile" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile" autocomplete="tel-national"></div></div>
+          <div class="lf"><label for="leadMobile">WhatsApp number</label>
+            <div class="tel" id="leadTel">
+              <button type="button" class="cc-btn" id="ccBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="Country code: India +91"><img id="ccFlag" src="https://flagcdn.com/w40/in.png" width="22" height="16" alt=""><span id="ccDial">+91</span><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+              <input id="leadMobile" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile" autocomplete="tel-national">
+              <div class="cc-pop" id="ccPop" hidden>
+                <input type="search" id="ccSearch" placeholder="Search country or code" aria-label="Search country" autocomplete="off">
+                <ul role="listbox" id="ccList" aria-label="Countries"></ul>
+              </div>
+            </div>
+          </div>
           <div class="lf"><label for="leadEmail">Business email <span style="font-weight:400;color:#5A6178">(optional)</span></label><input id="leadEmail" type="email" maxlength="200" autocomplete="email"></div>
           <p class="lead-err" id="leadErr2" role="alert"></p>
           <button class="btn btn-saffron" type="submit">Get my free RFQs →</button>
@@ -653,17 +674,49 @@ footer a{color:#fff}
   var LABEL={chemicals:"Chemicals & dyes",fuels:"Fuels & oils",machinery:"Machinery & boilers",auto:"Auto parts & vehicles",pharma:"Pharma & APIs",
     rubber:"Rubber & plastics",electrical:"Electrical equipment",steel:"Iron, steel & metals",textiles:"Textiles & yarn",other:"Other products"};
 
-  // Código do país com bandeira (mesma lista do /register); Índia (+91) vem marcada
+  // Código do país (mesma lista do /register): botão com bandeira + lista com busca. Índia (+91) vem marcada.
+  // Bandeiras em imagem (flagcdn.com) porque o Windows não mostra bandeiras em emoji.
   var COUNTRIES=[["IN","India","91"],["AR","Argentina","54"],["AU","Australia","61"],["BH","Bahrain","973"],["BD","Bangladesh","880"],["BE","Belgium","32"],["BT","Bhutan","975"],["BO","Bolivia","591"],["BR","Brazil","55"],["CA","Canada","1"],["CL","Chile","56"],["CN","China","86"],["CO","Colombia","57"],["EC","Ecuador","593"],["EG","Egypt","20"],["FR","France","33"],["DE","Germany","49"],["HK","Hong Kong","852"],["ID","Indonesia","62"],["IT","Italy","39"],["JP","Japan","81"],["KE","Kenya","254"],["KW","Kuwait","965"],["MY","Malaysia","60"],["MV","Maldives","960"],["MX","Mexico","52"],["NP","Nepal","977"],["NL","Netherlands","31"],["NZ","New Zealand","64"],["NG","Nigeria","234"],["OM","Oman","968"],["PY","Paraguay","595"],["PE","Peru","51"],["PH","Philippines","63"],["PT","Portugal","351"],["QA","Qatar","974"],["RU","Russia","7"],["SA","Saudi Arabia","966"],["SG","Singapore","65"],["ZA","South Africa","27"],["KR","South Korea","82"],["ES","Spain","34"],["LK","Sri Lanka","94"],["CH","Switzerland","41"],["TH","Thailand","66"],["TR","Turkey","90"],["AE","United Arab Emirates","971"],["GB","United Kingdom","44"],["US","United States","1"],["UY","Uruguay","598"],["VE","Venezuela","58"],["VN","Vietnam","84"]];
-  var flag=function(iso){return String.fromCodePoint.apply(null,iso.split("").map(function(c){return 127397+c.charCodeAt(0);}));};
-  var cc=document.getElementById("leadCc");
-  COUNTRIES.forEach(function(c){var o=document.createElement("option");o.value=c[0];o.dataset.dial=c[2];o.textContent=flag(c[0])+" "+c[1]+" (+"+c[2]+")";cc.appendChild(o);});
-  var dial=function(){return cc.options[cc.selectedIndex].dataset.dial;};
-  cc.addEventListener("change",function(){
-    var india=dial()==="91",m=document.getElementById("leadMobile");
-    document.getElementById("leadCcShow").textContent=flag(cc.value)+" +"+dial();
+  var FLAG=function(iso){return "https://flagcdn.com/w40/"+iso.toLowerCase()+".png";};
+  var ccIso="IN",ccIdx=-1,shown=[];
+  var dial=function(){return COUNTRIES.find(function(c){return c[0]===ccIso;})[2];};
+  var ccBtn=document.getElementById("ccBtn"),ccPop=document.getElementById("ccPop"),ccSearch=document.getElementById("ccSearch"),ccList=document.getElementById("ccList");
+  function ccRender(){
+    var q=ccSearch.value.trim().toLowerCase().replace(/^\+/,"");
+    shown=COUNTRIES.filter(function(c){return !q||c[1].toLowerCase().indexOf(q)>-1||c[2].indexOf(q)===0||c[0].toLowerCase()===q;});
+    ccList.textContent="";ccIdx=shown.length?0:-1;
+    if(!shown.length){var e=document.createElement("li");e.className="none";e.textContent="No country found";ccList.appendChild(e);return;}
+    shown.forEach(function(c,i){
+      var li=document.createElement("li"),img=document.createElement("img"),n=document.createElement("span"),d=document.createElement("b");
+      li.setAttribute("role","option");li.id="cc-"+c[0];li.setAttribute("aria-selected",c[0]===ccIso?"true":"false");
+      img.src=FLAG(c[0]);img.alt="";img.loading="lazy";n.textContent=c[1];d.textContent="+"+c[2];
+      li.appendChild(img);li.appendChild(n);li.appendChild(d);
+      li.addEventListener("mousedown",function(e){e.preventDefault();ccPick(c[0]);});
+      li.addEventListener("mousemove",function(){ccMark(i);});
+      ccList.appendChild(li);
+    });
+    ccMark(0);
+  }
+  function ccMark(i){ccIdx=i;Array.prototype.forEach.call(ccList.children,function(li,k){li.classList.toggle("on",k===i);});var on=ccList.children[i];if(on&&on.scrollIntoView)on.scrollIntoView({block:"nearest"});}
+  function ccOpen(){ccPop.hidden=false;ccBtn.setAttribute("aria-expanded","true");ccSearch.value="";ccRender();ccSearch.focus();}
+  function ccClose(focusBtn){ccPop.hidden=true;ccBtn.setAttribute("aria-expanded","false");if(focusBtn)ccBtn.focus();}
+  function ccPick(iso){
+    ccIso=iso;var c=COUNTRIES.find(function(x){return x[0]===iso;}),india=c[2]==="91",m=document.getElementById("leadMobile");
+    document.getElementById("ccFlag").src=FLAG(iso);document.getElementById("ccDial").textContent="+"+c[2];
+    ccBtn.setAttribute("aria-label","Country code: "+c[1]+" +"+c[2]);
     m.maxLength=india?10:14;m.placeholder=india?"10-digit mobile":"Mobile number";
+    ccClose();m.focus();
+  }
+  ccBtn.addEventListener("click",function(){if(ccPop.hidden)ccOpen();else ccClose(true);});
+  ccSearch.addEventListener("input",ccRender);
+  ccSearch.addEventListener("keydown",function(e){
+    if(e.key==="ArrowDown"){e.preventDefault();if(ccIdx<shown.length-1)ccMark(ccIdx+1);}
+    else if(e.key==="ArrowUp"){e.preventDefault();if(ccIdx>0)ccMark(ccIdx-1);}
+    else if(e.key==="Enter"){e.preventDefault();if(shown[ccIdx])ccPick(shown[ccIdx][0]);}
+    else if(e.key==="Escape"){e.preventDefault();ccClose(true);}
   });
+  document.addEventListener("mousedown",function(e){if(!ccPop.hidden&&!document.getElementById("leadTel").contains(e.target))ccClose();});
+
   var form=document.getElementById("lead"),cat=null;
   var $=function(id){return document.getElementById(id);};
   function step(n){
@@ -696,7 +749,7 @@ footer a{color:#fff}
     $("leadErr2").textContent="";
     var q=new URLSearchParams(location.search);
     var lead={category:LABEL[cat],product:pr||null,mobile:"+"+dial()+m,email:em||null,utm_source:q.get("utm_source"),utm_campaign:q.get("utm_campaign")};
-    var next="/register?"+new URLSearchParams({cat:REG[cat],cc:cc.value,m:m,e:em,p:pr,from:"lead"}).toString();
+    var next="/register?"+new URLSearchParams({cat:REG[cat],cc:ccIso,m:m,e:em,p:pr,from:"lead"}).toString();
     var go=function(){location.href=next;};
     // Guarda o lead antes de seguir; se a rede falhar, segue mesmo assim para não perder o cadastro
     var done=false,timer=setTimeout(function(){if(!done){done=true;go();}},2500);
