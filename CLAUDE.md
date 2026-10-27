@@ -27,6 +27,13 @@ pedidos de orçamento (RFQs) de compradores brasileiros.
 - assets/js/rfq-chat.js – conversa B2B compartilhada (portal, comprador, admin-orcamentos): tempo real, anexos e fotos
   (botão 📷, colar, arrastar), idioma escolhido por pessoa e tradução automática (MyMemory, grátis, cache no navegador)
 - docs/chat-languages.sql – coluna `rfq_messages.lang` (idioma em que cada mensagem foi escrita)
+- assets/js/order-flow.js – jornada do pedido depois da cotação aceita, compartilhada (comprador, portal, admin-orcamentos):
+  proforma (PDF obrigatório) → aprovação = pedido confirmado → sinal + comprovante → fornecedor confirma → produção →
+  fotos da mercadoria pronta → comprador aprova embarque → embarque (BL/AWB, ETD, ETA, documentos) → saldo → fornecedor
+  confirma e libera documentos → comprador confirma recebimento e avalia (1–5). Sinal 0% ou 100% pula a etapa que não existe.
+  Cancelar só antes de pagamento; "relatar um problema" avisa a equipe; a equipe age em nome de quem está na vez e muda etapa.
+- docs/order-journey.sql – `rfqs.order_stage/order_issue/order_data`, tabela `rfq_order_events` e função `order_action()`
+  (confere quem está na vez e grava o aviso no chat)
 - tools/catalogues.py – baixa catálogos e salva resumos (usa SUPABASE_SECRET_KEY do .env, nunca vai para o site)
 - assets/logo – logos SVG (globo laranja/verde com seta, texto branco)
 - docs/supabase-setup.sql – schema do banco (não é servido no site)

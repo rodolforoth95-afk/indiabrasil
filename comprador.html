@@ -20,6 +20,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="/assets/js/rfq-chat.js"></script>
+<script src="/assets/js/order-flow.js"></script>
 <style>
 :root{
   --navy:#0F1A3D; --navy-2:#1A2A5E; --navy-3:#23407A; --green:#0B7A55; --green-2:#00C853; --orange:#FF9100; --orange-d:#E07B00;
@@ -192,6 +193,7 @@ a.row:hover{background:var(--chip)}
 .ws{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,1fr);gap:16px;align-items:start}
 @media (max-width:1100px){.ws{grid-template-columns:minmax(0,1fr)}}
 .ws .card+.card{margin-top:14px}
+.ws-side>*+*{margin-top:14px}
 .next{border:2px solid var(--orange);background:var(--cream)}
 .next h3{display:flex;gap:.5rem;align-items:center}
 .quote{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px;background:var(--surface)}
@@ -274,7 +276,8 @@ a.row:hover{background:var(--chip)}
 
   // Situação do pedido como o comprador entende (inclui "aguardando fornecedor" x "fornecedor respondeu")
   function sit(r){
-    var ib=S.inbox[r.id]||{};
+    var ib=S.inbox[r.id]||{},of=OrderFlow.status(r,"buyer");
+    if(of)return of; // pedido na jornada (proforma, sinal, produção, embarque…)
     if(r.status==="won")return {k:"done",t:"Pedido fechado",c:"good"};
     if(r.status==="lost")return {k:"done",t:"Não seguiu",c:"bad"};
     if(r.status==="closed")return {k:"done",t:"Encerrado",c:""};
@@ -450,7 +453,7 @@ a.row:hover{background:var(--chip)}
     return ins.data;
   }
   async function loadData(){
-    var r=await sb.from("rfqs").select("id,code,created_at,updated_at,product,status,product_id,request_type,quantity,unit,products(image_path,reference)").eq("buyer_id",buyer.id).order("created_at",{ascending:false});
+    var r=await sb.from("rfqs").select("*,products(image_path,reference)").eq("buyer_id",buyer.id).order("created_at",{ascending:false});
     if(r.error)throw r.error;
     var ib=await sb.rpc("buyer_inbox");
     var sr=await sb.from("sourcing_requests").select("id,code,created_at,title,status").eq("buyer_id",buyer.id).order("created_at",{ascending:false});
@@ -506,9 +509,9 @@ a.row:hover{background:var(--chip)}
 
   // ---------- Painel ----------
   function viewHome(){
-    var c={wait:0,reply:0,quote:0,neg:0};S.rfqs.forEach(function(r){var k=sit(r).k;if(c[k]!=null)c[k]++;});
+    var c={wait:0,reply:0,quote:0,neg:0,order:0};S.rfqs.forEach(function(r){var k=sit(r).k;if(c[k]!=null)c[k]++;});
     var newQ=S.rfqs.reduce(function(n,r){return n+(+((S.inbox[r.id]||{}).new_quotes)||0);},0),u=totalUnread();
-    var attention=S.rfqs.filter(function(r){return unread(r.id)>0;});
+    var attention=S.rfqs.filter(function(r){return unread(r.id)>0||sit(r).turn;});
     var lst=(store("ib-quote-list")||[]).length;
     shell("#/",[
       pageH("Olá, "+(first(buyer.contact_name)||"comprador")+"!",buyer.company_name+(buyer.city?" · "+buyer.city+"/"+buyer.state:"")),
@@ -517,7 +520,8 @@ a.row:hover{background:var(--chip)}
         h("a",{class:"kpi"+(u?" hot":""),href:"#/mensagens"},[h("b",null,String(u)),h("span",null,"novidades para ler")]),
         h("a",{class:"kpi"+(newQ?" hot":""),href:"#/pedidos?f=quote"},[h("b",null,String(c.quote)),h("span",null,"com cotação recebida"+(newQ?" ("+newQ+" nova"+(newQ>1?"s":"")+")":""))]),
         h("a",{class:"kpi",href:"#/pedidos?f=wait"},[h("b",null,String(c.wait+c.reply)),h("span",null,"aguardando cotação")]),
-        h("a",{class:"kpi",href:"#/pedidos?f=neg"},[h("b",null,String(c.neg)),h("span",null,"em negociação")])
+        h("a",{class:"kpi",href:"#/pedidos?f=neg"},[h("b",null,String(c.neg)),h("span",null,"em negociação")]),
+        h("a",{class:"kpi"+(S.rfqs.some(function(r){return sit(r).turn;})?" hot":""),href:"#/pedidos?f=order"},[h("b",null,String(c.order)),h("span",null,"pedidos em andamento")])
       ]),
       h("div",{class:"grid2"},[
         h("div",{class:"card",style:"padding:0"},[h("div",{style:"padding:16px 16px 4px"},h("h2",null,attention.length?"Precisa da sua atenção":"Pedidos recentes")),
@@ -531,13 +535,13 @@ a.row:hover{background:var(--chip)}
         ])]),
         h("div",{class:"card",style:"margin-top:14px"},[h("h3",null,"Como funciona"),h("ol",{style:"margin:.3rem 0 0;padding-left:1.1rem;color:var(--muted);font-size:.92rem;display:grid;gap:.35rem"},[
           h("li",null,"Você pede o orçamento (ou amostra) pelo marketplace."),h("li",null,"O fornecedor responde no chat do pedido e envia a cotação."),
-          h("li",null,"Você aceita para negociar ou pede ajuste."),h("li",null,"Pagamento e envio são combinados direto, com nosso apoio.")])])])
+          h("li",null,"Você aceita para negociar ou pede ajuste."),h("li",null,"Com a proforma aprovada, o pedido segue aqui passo a passo: sinal, produção, embarque, saldo e recebimento, com nosso apoio.")])])])
       ])
     ]);
   }
 
   // ---------- Pedidos ----------
-  var FILTERS=[["","Todos"],["wait","Aguardando fornecedor"],["quote","Cotação recebida"],["neg","Em negociação"],["done","Encerrados"]];
+  var FILTERS=[["","Todos"],["wait","Aguardando fornecedor"],["quote","Cotação recebida"],["neg","Em negociação"],["order","Em andamento"],["done","Encerrados"]];
   function viewOrders(f){
     var match=function(r){var k=sit(r).k;return !f||(f==="wait"?k==="wait"||k==="reply":k===f);};
     var list=S.rfqs.filter(match);
@@ -570,13 +574,17 @@ a.row:hover{background:var(--chip)}
     var replied=!!(quotes.length||(ib.last_role&&ib.last_role!=="buyer")),closed=["won","lost","closed"].indexOf(r.status)>-1;
 
     // Linha do tempo do pedido
-    var steps=[["Pedido enviado",true],["Fornecedor respondeu",replied],["Cotação recebida",quotes.length>0],["Negociação",closed],["Concluído",closed]];
-    var nowIdx=steps.findIndex(function(x){return !x[1];});
-    var track2=h("ol",{class:"steps"},steps.map(function(x,i){return h("li",{class:x[1]?"done":i===nowIdx?"now":""},[h("b",null,x[1]?"✓":String(i+1)),x[0]]);}));
+    // Linha do tempo: do pedido ao recebimento (OrderFlow decide as etapas conforme a proforma)
+    function drawBar(rr){
+      var st=OrderFlow.bar(rr,"buyer",{replied:replied,quoted:quotes.length>0});
+      return h("ol",{class:"steps of-bar",style:"grid-template-columns:repeat("+st.length+",minmax(78px,1fr))"},st.map(function(x,i){
+        return h("li",{class:x.state},[h("b",null,x.state==="done"?"✓":String(i+1)),x.label,x.sub?h("span",{class:"of-sub"},x.sub):null]);}));
+    }
+    var track2=h("div",null,drawBar(r));
 
     stopChat();
     chat=RfqChat.mount({sb:sb,rfq:r,me:"buyer",lang:"pt",supplierLabel:"Fornecedor "+(pr.reference||""),onError:fail,
-      onNew:function(m){if(m.sender_role!=="buyer")markReadSoon(r.id);}});
+      onNew:function(m){if(m.sender_role!=="buyer"){markReadSoon(r.id);refreshFlowSoon();}}});
     markRead(r.id);
 
     async function setStatus(st,msg){
@@ -593,6 +601,18 @@ a.row:hover{background:var(--chip)}
       :["⏳","Aguardando o fornecedor","Avisaremos aqui quando ele responder. Enquanto isso, envie detalhes, fotos ou especificações pelo chat: isso acelera a cotação."];
     var next=h("div",{class:"card next"},[h("h3",null,[h("span",null,nextTxt[0]),nextTxt[1]]),h("p",{style:"margin:0"},nextTxt[2]),
       !closed?h("div",{style:"margin-top:.8rem"},h("button",{class:"btn btn-danger btn-sm",type:"button",onclick:function(){if(confirm("Encerrar este pedido? O fornecedor será avisado pelo chat."))setStatus("closed","Encerrei este pedido. Obrigado pelo retorno.");}},"Encerrar pedido")):null]);
+    // Depois da cotação aceita, o próximo passo vem da jornada do pedido (proforma → sinal → produção → embarque → saldo → recebimento)
+    var flowBox=h("div",null,OrderFlow.has(r)?flowEl(r):next);
+    function flowEl(rr){return OrderFlow.mount({sb:sb,rfq:rr,me:"buyer",chat:chat,onError:fail,
+      onChange:function(){loadData().then(function(){return viewOrder(rr.id);}).catch(fail);}}).el;}
+    var flowT=null;
+    function refreshFlowSoon(){clearTimeout(flowT);flowT=setTimeout(async function(){
+      var x=await sb.from("rfqs").select("*").eq("id",r.id).maybeSingle();
+      if(x.error||!x.data||!OrderFlow.has(x.data))return;
+      if(location.hash!=="#/pedido/"+r.id)return;
+      Object.assign(r,x.data);flowBox.replaceChildren(flowEl(r));track2.replaceChildren(drawBar(r));
+      var pl=document.querySelector(".ws-head > .pill");if(pl){var s2=sit(r);pl.className="pill "+s2.c;pl.textContent=s2.t;}
+    },700);}
 
     var best=quotes.reduce(function(b,x){return !b||x.unit_price<b.unit_price?x:b;},null);
     var qcard=h("div",{class:"card"},[h("h2",null,"Cotações ("+quotes.length+")"),
@@ -620,7 +640,7 @@ a.row:hover{background:var(--chip)}
       track2,
       h("div",{class:"ws"},[
         h("div",{class:"card"},[h("h2",{style:"display:flex;justify-content:space-between;gap:.5rem;flex-wrap:wrap"},["Conversa com o fornecedor",h("span",{class:"muted",style:"font-size:.82rem;font-weight:500"},"Equipe India Brasil acompanhando")]),chat.el]),
-        h("div",null,[next,qcard,mine])
+        h("div",{class:"ws-side"},[flowBox,qcard,mine])
       ])
     ]);
   }

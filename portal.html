@@ -20,6 +20,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="/assets/js/rfq-chat.js"></script>
+<script src="/assets/js/order-flow.js"></script>
 <style>
 :root{
   --navy:#0F1A3D; --navy-2:#1A2A5E; --navy-3:#23407A; --green:#0B7A55; --green-2:#00C853; --orange:#FF9100; --orange-d:#E07B00;
@@ -458,7 +459,7 @@ a.row:hover{background:var(--chip)}
 
   // ---------- dados ----------
   async function loadData(){
-    var r=await sb.from("rfqs").select("id,code,created_at,updated_at,product,product_id,buyer_label,quantity,unit,status,request_type,needed_by,products(image_path)").eq("supplier_id",sup.id).order("created_at",{ascending:false});
+    var r=await sb.from("rfqs").select("*,products(image_path)").eq("supplier_id",sup.id).order("created_at",{ascending:false});
     if(r.error)throw r.error;
     var ib=await sb.rpc("supplier_inbox");
     var pr=await sb.from("products").select("id,name,category,image_path,price_min,price_max,currency,price_unit,moq,description,code,variant_count,created_at").eq("supplier_id",sup.id).eq("published",true).order("name");
@@ -490,7 +491,8 @@ a.row:hover{background:var(--chip)}
 
   // Situação do pedido do ponto de vista do fornecedor
   function sit(r){
-    var ib=S.inbox[r.id]||{};
+    var ib=S.inbox[r.id]||{},of=OrderFlow.status(r,"supplier");
+    if(of)return of; // order in progress: proforma, advance, production, shipment…
     if(r.status==="won")return {k:"done",t:"Order confirmed",c:"good"};
     if(r.status==="lost")return {k:"done",t:"Not selected",c:"bad"};
     if(r.status==="closed")return {k:"done",t:"Closed",c:""};
@@ -501,7 +503,7 @@ a.row:hover{background:var(--chip)}
   }
   function unread(id){return +((S.inbox[id]||{}).unread)||0;}
   function totalUnread(){return S.rfqs.reduce(function(n,r){return n+unread(r.id);},0);}
-  function needsAction(){return S.rfqs.filter(function(r){var k=sit(r).k;return k==="new"||k==="reply";});}
+  function needsAction(){return S.rfqs.filter(function(r){var x=sit(r);return x.k==="new"||x.k==="reply"||x.turn||(x.k!=="done"&&unread(r.id)>0);});}
 
   // ---------- estrutura ----------
   var ICON={
@@ -626,7 +628,7 @@ a.row:hover{background:var(--chip)}
     var isLive=sup.status==="published";
     var kp=[
       kpi(num(S.products.length),"products in showcase",{href:"#/products"}),
-      kpi(num(att.length),"enquiries need your reply",{href:"#/enquiries?f=todo",hot:att.length>0}),
+      kpi(num(att.length),"enquiries & orders need you",{href:"#/enquiries?f=todo",hot:att.length>0}),
       kpi(num(u),"unread messages",{href:"#/messages",hot:u>0})
     ];
     if(d)kp.push(
@@ -694,8 +696,8 @@ a.row:hover{background:var(--chip)}
   }
 
   // ---------- Enquiries ----------
-  var FILTERS=[["","All"],["todo","Needs reply"],["quoted","Quotation sent"],["neg","In negotiation"],["done","Closed"]];
-  function inFilter(r,f){var k=sit(r).k;return !f||(f==="todo"?k==="new"||k==="reply":k===f);}
+  var FILTERS=[["","All"],["todo","Needs you"],["quoted","Quotation sent"],["neg","In negotiation"],["order","Orders in progress"],["done","Closed"]];
+  function inFilter(r,f){var x=sit(r);return !f||(f==="todo"?needsAction().indexOf(r)>-1:x.k===f);}
   function viewEnquiries(f){
     var list=S.rfqs.filter(function(r){return inFilter(r,f);});
     shell("#/enquiries",[
@@ -724,12 +726,16 @@ a.row:hover{background:var(--chip)}
     var mine=await sb.from("rfq_messages").select("id",{count:"exact",head:true}).eq("rfq_id",r.id).eq("sender_role","supplier");
     var quotes=qs.data,s=sit(r),closed=["won","lost","closed"].indexOf(r.status)>-1,replied=quotes.length>0||(mine.count||0)>0;
 
-    var steps=[["Enquiry received",true],["You replied",replied],["Quotation sent",quotes.length>0],["Negotiation",closed],["Closed",closed]];
-    var nowIdx=steps.findIndex(function(x){return !x[1];});
-    var bar=h("ol",{class:"journey"},steps.map(function(x,i){return h("li",{class:x[1]?"done":i===nowIdx?"now":""},[h("b",null,x[1]?"✓":String(i+1)),x[0]]);}));
+    // From enquiry to delivery (OrderFlow skips advance/balance when the proforma has none)
+    function drawBar(rr){
+      var st=OrderFlow.bar(rr,"supplier",{replied:replied,quoted:quotes.length>0});
+      return h("ol",{class:"journey of-bar",style:"grid-template-columns:repeat("+st.length+",minmax(80px,1fr))"},st.map(function(x,i){
+        return h("li",{class:x.state},[h("b",null,x.state==="done"?"✓":String(i+1)),x.label,x.sub?h("small",null,x.sub):null]);}));
+    }
+    var bar=h("div",null,drawBar(r));
 
     stopChat();
-    chat=RfqChat.mount({sb:sb,rfq:r,me:"supplier",lang:"en",onError:fail,onNew:function(m){if(m.sender_role!=="supplier")markReadSoon(r.id);}});
+    chat=RfqChat.mount({sb:sb,rfq:r,me:"supplier",lang:"en",onError:fail,onNew:function(m){if(m.sender_role!=="supplier"){markReadSoon(r.id);refreshFlowSoon();}}});
     markRead(r.id);
 
     var nx=closed?["✔️",r.status==="won"?"Order confirmed":"Enquiry closed","The conversation stays available for reference."]
@@ -738,6 +744,17 @@ a.row:hover{background:var(--chip)}
       :quotes.length?["📨","Quotation sent","Waiting for the buyer. If there is no answer in 3 days, follow up in the chat or send an updated quotation."]
       :["⏳","Send your quotation","Fast replies win more orders: aim for 24 hours. Ask in the chat if you need more details."];
     var next=h("div",{class:"card next"},[h("h3",null,[h("span",null,nx[0]),nx[1]]),h("p",{style:"margin:0"},nx[2])]);
+    // After the buyer accepts a quotation, the next step comes from the order journey
+    var flowBox=h("div",null,OrderFlow.has(r)?flowEl(r):next);
+    function flowEl(rr){return OrderFlow.mount({sb:sb,rfq:rr,me:"supplier",chat:chat,onError:fail,
+      onChange:function(){dashCache={};loadData().then(function(){return viewEnquiry(rr.id);}).catch(fail);}}).el;}
+    var flowT=null;
+    function refreshFlowSoon(){clearTimeout(flowT);flowT=setTimeout(async function(){
+      var x=await sb.from("rfqs").select("*").eq("id",r.id).maybeSingle();
+      if(x.error||!x.data||!OrderFlow.has(x.data)||location.hash!=="#/enquiry/"+r.id)return;
+      Object.assign(r,x.data);flowBox.replaceChildren(flowEl(r));bar.replaceChildren(drawBar(r));
+      var pl=document.querySelector(".ws-head > .pill");if(pl){var s2=sit(r);pl.className="pill "+s2.c;pl.textContent=s2.t;}
+    },700);}
     var req=h("div",{class:"card"},[h("h2",null,"Buyer's request"),
       pr.id?h("a",{class:"row",style:"padding:0 0 12px;border:0",href:"/marketplace/produto/"+pr.id,target:"_blank",rel:"noopener"},[thumb(pr.image_path),h("div",{class:"tx"},[h("div",{class:"nm"},pr.name||r.product),h("div",{class:"mt"},"See it on the marketplace ↗")])]):null,
       dl([["Request type",r.request_type==="sample"?"Sample request":"Quotation"],["Buyer",r.buyer_label],["Quantity",r.quantity!=null?num(r.quantity)+" "+(r.unit||""):null],
@@ -751,7 +768,7 @@ a.row:hover{background:var(--chip)}
       bar,
       h("div",{class:"ws"},[
         h("div",{class:"card"},[h("h2",{style:"display:flex;justify-content:space-between;gap:.5rem;flex-wrap:wrap"},["Chat with the buyer",h("span",{class:"muted",style:"font-size:.82rem;font-weight:500"},"India Brazil team following")]),chat.el]),
-        h("div",{class:"stack"},[next,quotesCard(r,quotes,closed),req])
+        h("div",{class:"stack"},[flowBox,quotesCard(r,quotes,closed),req])
       ])
     ]);
   }
