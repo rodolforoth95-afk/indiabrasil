@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   Portal do fornecedor – India Brazil (/portal) · "Supplier Centre"
-  Login: e-mail do cadastro + senha (2FA desligado por enquanto: REQUIRE_2FA).
+  Login: e-mail do cadastro + senha (sem autenticador de dois fatores).
   Painel no mesmo padrão da conta do comprador: menu lateral, painel com números, pedidos (enquiries),
   mensagens, desempenho na vitrine (impressões, visualizações, pedidos), produtos, catálogos, empresa e segurança.
   Números da vitrine: função supplier_dashboard() e eventos do marketplace (docs/supplier-analytics.sql).
@@ -116,12 +116,6 @@ header{background:var(--navy);color:#fff;position:sticky;top:0;z-index:20;box-sh
 .auth form h1{font-size:1.5rem}
 .auth .btn{width:100%;margin-top:.3rem}
 .auth .alt{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-top:1rem;font-size:.92rem}
-.qr{display:flex;justify-content:center;margin:1rem 0;padding:12px;background:#fff;border-radius:10px;border:1px solid var(--line)}
-.qr img{width:200px;height:200px}
-.code{letter-spacing:.4em;font-size:1.4rem;text-align:center;font-family:ui-monospace,Menlo,Consolas,monospace}
-.secret{word-break:break-all;background:var(--chip);border-radius:8px;padding:.5rem .7rem;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem}
-ol.howto{padding-left:1.2rem;margin:.4rem 0 1rem}
-ol.howto li{margin-bottom:.35rem}
 
 /* Painel */
 .shell{max-width:1280px;margin:0 auto;padding:26px 16px 70px;display:grid;grid-template-columns:240px minmax(0,1fr);gap:22px;align-items:start}
@@ -311,33 +305,6 @@ a.row:hover{background:var(--chip)}
         <div class="alt"><button class="link" type="button" data-go="vSignin">Back to sign in</button></div>
       </form>
 
-      <!-- Ativar 2FA (quando REQUIRE_2FA=true) -->
-      <form id="vEnroll" hidden>
-        <h1>Protect your account</h1>
-        <p class="muted">Two-step verification is required. You will need a code from your phone each time you sign in.</p>
-        <ol class="howto">
-          <li>Install an authenticator app: Google Authenticator, Microsoft Authenticator or Authy.</li>
-          <li>In the app, tap <b>+</b> and scan this QR code.</li>
-          <li>Type the 6-digit code shown in the app.</li>
-        </ol>
-        <div class="qr"><img id="qr" alt="QR code for your authenticator app"></div>
-        <p class="hint">Cannot scan? Enter this key in the app instead:</p>
-        <p class="secret" id="secret"></p>
-        <div class="field"><label for="enCode">6-digit code</label><input id="enCode" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>
-        <button class="btn" type="submit">Turn on two-step verification</button>
-        <p class="err" role="alert"></p>
-      </form>
-
-      <!-- Código 2FA no login -->
-      <form id="vChallenge" hidden>
-        <h1>Two-step verification</h1>
-        <p class="muted">Open your authenticator app and type the 6-digit code for <b>India Brazil</b>.</p>
-        <div class="field"><label for="chCode">6-digit code</label><input id="chCode" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>
-        <button class="btn" type="submit">Verify</button>
-        <p class="err" role="alert"></p>
-        <p class="hint">Lost your phone? Contact us on WhatsApp and we will reset your verification after confirming your identity.</p>
-      </form>
-
       <!-- Nova senha (link do e-mail) -->
       <form id="vNewpass" hidden>
         <h1>Choose a new password</h1>
@@ -367,13 +334,10 @@ a.row:hover{background:var(--chip)}
   var CUR=["USD","INR","EUR","BRL"], INCO=["FOB","CIF","CFR","EXW","FCA","DAP","DDP"];
 
   // Sessão guardada separada da do /admin e da do comprador
-  // 2FA (código do app autenticador) desligado por enquanto. Para religar: REQUIRE_2FA=true aqui
-  // e rodar de novo a função has_2fa() do docs/portal-setup.sql no Supabase.
-  var REQUIRE_2FA=false;
   var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{storageKey:"ib-portal-auth"}});
   var $=function(id){return document.getElementById(id);};
-  var FORMS=["vSignin","vSignup","vForgot","vEnroll","vChallenge","vNewpass","vNone"];
-  var recovering=/type=recovery/.test(location.hash), me=null, suppliers=[], sup=null, chat=null, live=null, enrollId=null;
+  var FORMS=["vSignin","vSignup","vForgot","vNewpass","vNone"];
+  var recovering=/type=recovery/.test(location.hash), me=null, suppliers=[], sup=null, chat=null, live=null;
   var S={rfqs:[],inbox:{},products:[],dash:null,dashErr:false}; // dados do painel do fornecedor escolhido
 
   // ---------- utilidades (elementos montados sem innerHTML: dados vêm de usuários) ----------
@@ -444,23 +408,6 @@ a.row:hover{background:var(--chip)}
     msg(f,"","If an account exists for this email, a reset link is on its way. Check your inbox and spam folder.");
   });
 
-  $("vEnroll").addEventListener("submit",async function(ev){
-    ev.preventDefault();var f=this;msg(f);busy(f,true);
-    var r=await sb.auth.mfa.challengeAndVerify({factorId:enrollId,code:$("enCode").value.trim()});
-    busy(f,false);
-    if(r.error)return msg(f,"That code did not work. Check the time on your phone and try the newest code.");
-    $("enCode").value="";start();
-  });
-
-  $("vChallenge").addEventListener("submit",async function(ev){
-    ev.preventDefault();var f=this;msg(f);busy(f,true);
-    var fs=(await sb.auth.mfa.listFactors()).data;
-    var r=await sb.auth.mfa.challengeAndVerify({factorId:fs.totp[0].id,code:$("chCode").value.trim()});
-    busy(f,false);
-    if(r.error)return msg(f,"That code did not work. Try the newest code in your app.");
-    $("chCode").value="";start();
-  });
-
   $("vNewpass").addEventListener("submit",async function(ev){
     ev.preventDefault();var f=this;msg(f);
     if(!strong($("npPass").value))return msg(f,"Password must have at least 10 characters.");
@@ -478,14 +425,10 @@ a.row:hover{background:var(--chip)}
   }
   sb.auth.onAuthStateChange(function(ev){if(ev==="PASSWORD_RECOVERY"){recovering=true;setTimeout(start,0);}});
 
-  // Decide o que mostrar: login → 2FA (se ligado) → nova senha → painel
+  // Decide o que mostrar: login → nova senha → painel
   async function start(){
     var s=(await sb.auth.getSession()).data.session;
     if(!s)return showForm(recovering?"vForgot":"vSignin");
-    var fs=(await sb.auth.mfa.listFactors()).data||{all:[],totp:[]};
-    if(REQUIRE_2FA&&!fs.totp.length)return enroll(fs);
-    var aal=(await sb.auth.mfa.getAuthenticatorAssuranceLevel()).data;
-    if(REQUIRE_2FA&&aal.currentLevel!=="aal2")return showForm("vChallenge");
     if(recovering)return showForm("vNewpass");
     me=s.user;
     var r=await sb.from("suppliers").select("*").order("created_at",{ascending:false});
@@ -504,14 +447,6 @@ a.row:hover{background:var(--chip)}
     var saved=+(localStorage.getItem("ib-portal-sup")||0);
     p.value=suppliers[saved]?saved:0;
     await pickSupplier(+p.value);
-  }
-  async function enroll(fs){
-    // Apaga tentativas antigas não concluídas antes de gerar um QR novo
-    for(var i=0;i<fs.all.length;i++)if(fs.all[i].status!=="verified")await sb.auth.mfa.unenroll({factorId:fs.all[i].id});
-    var r=await sb.auth.mfa.enroll({factorType:"totp",friendlyName:"India Brazil "+new Date().toISOString().slice(0,10)});
-    if(r.error)return fail(r.error);
-    enrollId=r.data.id;$("qr").src=r.data.totp.qr_code;$("secret").textContent=r.data.totp.secret;
-    showForm("vEnroll");
   }
   $("pick").addEventListener("change",function(){try{localStorage.setItem("ib-portal-sup",this.value);}catch(e){}pickSupplier(+this.value).catch(fail);});
   async function pickSupplier(i){
@@ -980,7 +915,6 @@ a.row:hover{background:var(--chip)}
 
   // ---------- Segurança ----------
   async function viewSecurity(){
-    var fs=(await sb.auth.mfa.listFactors()).data||{totp:[]};
     var f=h("form",null,[
       h("div",{class:"field"},[h("label",{for:"cpPass"},"New password"),h("input",{id:"cpPass",type:"password",autocomplete:"new-password",minlength:"10",required:true}),h("p",{class:"hint"},"At least 10 characters.")]),
       h("div",{class:"field"},[h("label",{for:"cpPass2"},"Confirm new password"),h("input",{id:"cpPass2",type:"password",autocomplete:"new-password",required:true})]),
@@ -998,8 +932,7 @@ a.row:hover{background:var(--chip)}
     shell("#/security",[
       pageH("Login & security","Your sign-in details."),
       h("div",{class:"grid2"},[
-        h("div",{class:"card"},[h("h2",null,"Sign-in details"),dl([["Email",me.email],["Last sign-in",me.last_sign_in_at?date(me.last_sign_in_at):null],["Two-step verification",REQUIRE_2FA?h("span",{class:"pill good"},"On"):h("span",{class:"pill"},"Off")]].concat(REQUIRE_2FA?[["Authenticator added",fs.totp[0]?date(fs.totp[0].created_at):"–"]]:[])),
-          REQUIRE_2FA?h("p",{class:"hint",style:"margin-top:1rem"},"Changed phones? Contact us on WhatsApp and we will reset your two-step verification after confirming your identity."):null]),
+        h("div",{class:"card"},[h("h2",null,"Sign-in details"),dl([["Email",me.email],["Last sign-in",me.last_sign_in_at?date(me.last_sign_in_at):null]])]),
         h("div",{class:"card"},[h("h2",null,"Change password"),f])
       ])
     ]);

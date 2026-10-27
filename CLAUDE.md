@@ -10,7 +10,7 @@ pedidos de orçamento (RFQs) de compradores brasileiros.
 - portal.html – "Supplier Centre" do fornecedor (/portal, em inglês), no mesmo padrão da conta do comprador:
   menu lateral, painel com números, enquiries (RFQs) com espaço de cotação e chat, mensagens, desempenho na vitrine
   (impressões, visualizações, funil, origem), produtos com qualidade do anúncio, catálogos, empresa e segurança.
-  2FA hoje desligado (REQUIRE_2FA=false). Números: rpc supplier_dashboard / supplier_inbox
+  Sem autenticador de dois fatores (removido; no banco has_2fa() sempre devolve true). Números: rpc supplier_dashboard / supplier_inbox
 - docs/supplier-analytics.sql – rastreamento do marketplace por fornecedor (`marketplace_events.supplier_id` por trigger,
   `product_ids` para impressões, origem/UTM/aparelho) e funções `supplier_dashboard(p_supplier,p_days)` e `supplier_inbox()`.
   Base para o impulsionamento pago no futuro (o portal já mostra o cartão "Boost your products – coming soon")
