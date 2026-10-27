@@ -7,8 +7,13 @@ pedidos de orçamento (RFQs) de compradores brasileiros.
 - index.html – landing page para fornecedores indianos (em inglês)
 - register.html – cadastro em 4 etapas, grava no Supabase (tabela `suppliers`, bucket `catalogues`)
 - admin.html – área do administrador (/admin): login Supabase Auth, só para quem está em `public.admins`
-- portal.html – portal do fornecedor (/portal, em inglês): conta ligada ao cadastro pelo e-mail confirmado,
-  2FA por app autenticador obrigatório, cadastro, catálogos, orçamentos (RFQs), cotações e chat
+- portal.html – "Supplier Centre" do fornecedor (/portal, em inglês), no mesmo padrão da conta do comprador:
+  menu lateral, painel com números, enquiries (RFQs) com espaço de cotação e chat, mensagens, desempenho na vitrine
+  (impressões, visualizações, funil, origem), produtos com qualidade do anúncio, catálogos, empresa e segurança.
+  2FA hoje desligado (REQUIRE_2FA=false). Números: rpc supplier_dashboard / supplier_inbox
+- docs/supplier-analytics.sql – rastreamento do marketplace por fornecedor (`marketplace_events.supplier_id` por trigger,
+  `product_ids` para impressões, origem/UTM/aparelho) e funções `supplier_dashboard(p_supplier,p_days)` e `supplier_inbox()`.
+  Base para o impulsionamento pago no futuro (o portal já mostra o cartão "Boost your products – coming soon")
 - admin-orcamentos.html – time cria RFQs, vê cotações e conversa no chat (/admin-orcamentos, mesmo login do /admin)
 - marketplace.html – vitrine pública B2B (/marketplace, português; endereços reais /marketplace/produto/<id>/<nome>, ver rewrite no vercel.json): busca, categorias, produto com cotação rápida, lista de cotação, vitrine do fornecedor
   (o comprador vê "Fornecedor IB-XXXX", nunca nome/contato: o meio de campo é da India Brasil)

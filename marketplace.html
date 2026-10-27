@@ -341,7 +341,35 @@ footer p{margin:.4rem 0 0}
 
   // --- Medição do funil (anônima, sem dados pessoais) ---
   var SID=(function(){try{var s=sessionStorage.getItem("ib-sid");if(!s){s=Math.random().toString(36).slice(2)+Date.now().toString(36);sessionStorage.setItem("ib-sid",s);}return s;}catch(e){return null;}})();
-  function track(event,extra){sb.from("marketplace_events").insert(Object.assign({session:SID,event:event},extra||{})).then(function(){},function(){});}
+  // De onde o visitante veio (fica guardado na sessão para os próximos eventos) e o tipo de aparelho
+  var ORIGIN=(function(){
+    var o={};try{o=JSON.parse(sessionStorage.getItem("ib-origin")||"null")||{};}catch(e){}
+    if(!o.source){
+      var u=new URLSearchParams(location.search),ref="";try{ref=document.referrer?new URL(document.referrer).hostname:"";}catch(e){}
+      if(ref===location.hostname)ref="";
+      o={utm_source:(u.get("utm_source")||"").slice(0,100)||null,utm_campaign:(u.get("utm_campaign")||"").slice(0,100)||null,referrer:ref.slice(0,200)||null,
+         source:u.get("utm_source")?"campaign":/google|bing|duckduckgo|yahoo/.test(ref)?"search":/facebook|instagram|linkedin|whatsapp|twitter|x\.com|youtube/.test(ref)?"social":ref?"referral":"direct"};
+      try{sessionStorage.setItem("ib-origin",JSON.stringify(o));}catch(e){}
+    }
+    o.device=matchMedia("(max-width: 760px)").matches?"mobile":"desktop";
+    return o;
+  })();
+  // Se o banco ainda não tiver as colunas novas (docs/supplier-analytics.sql), grava só o básico, como antes
+  var OLD_EVENTS=["view_home","search","view_product","add_to_list","start_quote"];
+  function track(event,extra){
+    extra=extra||{};
+    sb.from("marketplace_events").insert(Object.assign({session:SID,event:event},ORIGIN,extra)).then(function(r){
+      if(r.error&&OLD_EVENTS.indexOf(event)>-1)sb.from("marketplace_events").insert({session:SID,event:event,product_id:extra.product_id||null,query:extra.query||null}).then(function(){},function(){});
+    },function(){});
+  }
+  // Impressões: quais produtos o comprador realmente viu na tela (enviadas em lotes, uma vez por cartão)
+  var seen=[],seenTimer=null;
+  function flushSeen(){clearTimeout(seenTimer);seenTimer=null;if(!seen.length)return;track("impressions",{product_ids:seen.splice(0,120)});if(seen.length)flushSeen();}
+  var io="IntersectionObserver" in window?new IntersectionObserver(function(es){es.forEach(function(e){
+    if(!e.isIntersecting)return;io.unobserve(e.target);seen.push(e.target.dataset.pid);if(!seenTimer)seenTimer=setTimeout(flushSeen,2000);
+  });},{threshold:0.5}):null;
+  addEventListener("pagehide",flushSeen);
+  document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden")flushSeen();});
 
   // --- Lista de cotação (vários produtos num pedido só, guardada neste navegador) ---
   function getList(){try{return JSON.parse(localStorage.getItem("ib-quote-list")||"[]");}catch(e){return [];}}
@@ -394,7 +422,7 @@ footer p{margin:.4rem 0 0}
   function card(p,sups){
     var s=sups[p.supplier_id],pt=priceText(p),on=inList(p.id),tg=tags(p);
     var add=h("button",{class:"add",type:"button",title:"Adicionar à lista de cotação","aria-label":"Adicionar "+p.name+" à lista de cotação","aria-pressed":on?"true":"false",onclick:function(){toggleList(p,add);}},on?"✓":"+");
-    return h("div",{class:"card"},[
+    var el=h("div",{class:"card","data-pid":p.id},[
       h("a",{href:productUrl(p)},[
         h("div",{class:"ph"},[p.image_path?h("img",{src:IMG+p.image_path,alt:p.name,loading:"lazy"}):null,
           h("div",{class:"badges"},[s&&s.verified?h("span",{class:"badge v"},"✓ Verificado"):null,tg.slice(0,s&&s.verified?1:2).map(function(t){return h("span",{class:"badge"+(/amostra/i.test(t)?" o":"")},t);})])]),
@@ -408,6 +436,8 @@ footer p{margin:.4rem 0 0}
       ]),
       h("div",{class:"act"},[h("button",{class:"btn btn-sm",type:"button",onclick:function(){track("start_quote",{product_id:p.id});quoteFrom(p);}},"Pedir orçamento"),add])
     ]);
+    if(io)io.observe(el);
+    return el;
   }
   async function cards(list,cls){
     var sups=await suppliers(uniq(list.map(function(p){return p.supplier_id;})));
@@ -684,6 +714,7 @@ footer p{margin:.4rem 0 0}
     if(!s){v.appendChild(h("div",{class:"empty"},"Fornecedor não encontrado."));return;}
     var r=await sb.from("products").select(COLS).eq("published",true).eq("supplier_id",id).order("category").order("name");
     if(r.error)throw r.error;
+    track("view_supplier",{supplier_id:id});
     seo(supLabel(s.reference)+" – fabricante indiano | India Brasil",r.data.length+" produtos de fabricante indiano"+(s.verified?" verificado":"")+". Peça orçamento sem custo.",BASE+"/fornecedor/"+id);
     v.appendChild(h("section",{class:"banner",style:"padding:26px 28px;margin-bottom:6px"},[
       h("div",{class:"kicker"},s.verified?"✓ Verificado pela India Brasil":"Fornecedor indiano"),
@@ -706,6 +737,7 @@ footer p{margin:.4rem 0 0}
   window.addEventListener("popstate",route);
   $("topSearch").addEventListener("submit",function(e){e.preventDefault();go($("q").value);});
   async function route(){
+    flushSeen();
     // Links antigos com # (#/produto/…) continuam funcionando
     if(/^#\//.test(location.hash)){history.replaceState(null,"",BASE+location.hash.slice(1));}
     var path=location.pathname.replace(/\.html$/,"").replace(/\/+$/,"")||BASE,v=$("view");

@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <!--
-  Portal do fornecedor – India Brazil (/portal)
-  Login: e-mail do cadastro + senha + código do app autenticador (2FA obrigatório).
-  Os dados só chegam com 2FA concluído: as regras ficam no banco (docs/portal-setup.sql).
+  Portal do fornecedor – India Brazil (/portal) · "Supplier Centre"
+  Login: e-mail do cadastro + senha (2FA desligado por enquanto: REQUIRE_2FA).
+  Painel no mesmo padrão da conta do comprador: menu lateral, painel com números, pedidos (enquiries),
+  mensagens, desempenho na vitrine (impressões, visualizações, pedidos), produtos, catálogos, empresa e segurança.
+  Números da vitrine: função supplier_dashboard() e eventos do marketplace (docs/supplier-analytics.sql).
+  Rotas (#): / /enquiries?f= /enquiry/<id> /messages /performance?d= /products /catalogues /profile /security
+  Regras de acesso no banco: docs/portal-setup.sql, marketplace-setup.sql, buyer-account.sql, supplier-analytics.sql.
 -->
 <html lang="en-IN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Supplier portal | India Brazil</title>
+<title>Supplier Centre | India Brazil</title>
 <link rel="icon" href="/assets/logo/india-brazil-icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,251 +22,406 @@
 <script src="/assets/js/rfq-chat.js"></script>
 <style>
 :root{
-  --navy:#0F1A3D; --green:#0B7A55; --green-2:#00C853; --orange:#FF9100;
-  --ink:#151A2D; --muted:#5A6178; --line:#DCE0E8; --page:#F5F7FA; --surface:#FFFFFF; --field:#FFFFFF;
-  --chip:#EEF1F6; --error:#B42318; --focus:#2F6FED; --mine:#E7F4EE;
+  --navy:#0F1A3D; --navy-2:#1A2A5E; --navy-3:#23407A; --green:#0B7A55; --green-2:#00C853; --orange:#FF9100; --orange-d:#E07B00;
+  --ink:#151A2D; --muted:#5A6178; --line:#E1E5EC; --page:#F3F5F8; --surface:#FFFFFF; --field:#FFFFFF;
+  --chip:#EEF1F6; --error:#B42318; --focus:#2F6FED; --mine:#E7F4EE; --img:#EEF1F5; --cream:#FFF6EA; --info:#2F6FED;
+  --bar-a:#C9D3E3; --bar-b:#0B7A55;
   color-scheme:light; box-sizing:border-box;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --ink:#ECEEF5; --muted:#A8AFC4; --line:#2B3250; --page:#0C1124; --surface:#151B33; --field:#1B2240; --chip:#232B4A;
-  --green:#2FB283; --error:#FF8A80; --focus:#7FA6FF; --mine:#173A31; color-scheme:dark;}}
-:root[data-theme="dark"]{--ink:#ECEEF5; --muted:#A8AFC4; --line:#2B3250; --page:#0C1124; --surface:#151B33; --field:#1B2240; --chip:#232B4A;
-  --green:#2FB283; --error:#FF8A80; --focus:#7FA6FF; --mine:#173A31; color-scheme:dark;}
+  --ink:#ECEEF5; --muted:#A8AFC4; --line:#2B3250; --page:#0B1022; --surface:#151B33; --field:#1B2240; --chip:#232B4A;
+  --green:#2FB283; --error:#FF8A80; --focus:#7FA6FF; --mine:#173A31; --img:#1B2240; --cream:#2A2218; --info:#7FA6FF;
+  --bar-a:#34406A; --bar-b:#2FB283; color-scheme:dark;}}
+:root[data-theme="dark"]{--ink:#ECEEF5; --muted:#A8AFC4; --line:#2B3250; --page:#0B1022; --surface:#151B33; --field:#1B2240; --chip:#232B4A;
+  --green:#2FB283; --error:#FF8A80; --focus:#7FA6FF; --mine:#173A31; --img:#1B2240; --cream:#2A2218; --info:#7FA6FF;
+  --bar-a:#34406A; --bar-b:#2FB283; color-scheme:dark;}
 *,*::before,*::after{box-sizing:inherit}
 body{margin:0;min-height:100vh;background:var(--page);color:var(--ink);font-family:"IBM Plex Sans","Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;font-size:15px}
-h1,h2,h3{line-height:1.2;margin:0 0 .5em;letter-spacing:-.01em}
+h1,h2,h3{line-height:1.2;margin:0 0 .5em;letter-spacing:-.015em}
 a{color:var(--green)}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:4px}
 [hidden]{display:none!important}
-
-header{background:var(--navy);color:#fff}
-header .in{max-width:1180px;margin:0 auto;padding:0 16px;height:60px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
-header img{height:34px;width:auto;display:block}
-header .who{display:flex;align-items:center;gap:.8rem;font-size:.9rem;color:#C9D0E6;min-width:0}
-header .who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-main{max-width:1180px;margin:0 auto;padding:24px 16px 64px}
-
-.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}
-.btn{font:inherit;font-weight:600;border-radius:8px;padding:.6rem 1.1rem;border:1.5px solid transparent;cursor:pointer;background:var(--green);color:#fff;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:.4rem;white-space:nowrap}
-.btn:hover{filter:brightness(1.08)}
-.btn[disabled]{opacity:.55;cursor:default;filter:none}
+.muted{color:var(--muted)}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em}
+.btn{font:inherit;font-weight:700;border-radius:10px;padding:.65rem 1.15rem;border:1.5px solid transparent;cursor:pointer;background:var(--orange);color:#0F1A3D;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:.45rem;white-space:nowrap}
+.btn:hover{background:#FFA22E}
+.btn[disabled]{opacity:.55;cursor:default}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:#0A6C4B}
 .btn-ghost{background:transparent;color:var(--ink);border-color:var(--line)}
-header .btn-ghost{color:#fff;border-color:rgba(255,255,255,.3);padding:.35rem .8rem}
-.btn-sm{padding:.3rem .7rem;font-size:.85rem}
+.btn-ghost:hover{background:var(--chip)}
+.btn-sm{padding:.38rem .75rem;font-size:.86rem;border-radius:8px}
 .link{background:none;border:0;padding:0;font:inherit;color:var(--green);cursor:pointer;text-decoration:underline}
-input,select,textarea{font:inherit;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:8px;padding:.6rem .75rem;width:100%}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:10px;padding:.65rem .8rem;width:100%}
 textarea{resize:vertical;min-height:5rem}
 input:focus,select:focus,textarea:focus{border-color:var(--focus);outline:none;box-shadow:0 0 0 3px rgba(47,111,237,.18)}
-label{display:block;font-weight:500;margin-bottom:.3rem}
+label{display:block;font-weight:600;margin-bottom:.3rem;font-size:.9rem}
 .field{margin-bottom:1rem}
-.hint{font-size:.85rem;color:var(--muted);margin:.3rem 0 0}
-.muted{color:var(--muted)}
+.hint{font-size:.84rem;color:var(--muted);margin:.3rem 0 0}
 .err{color:var(--error);font-size:.9rem;margin:.6rem 0 0}
 .ok{color:var(--green);font-size:.9rem;margin:.6rem 0 0}
-.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em}
+.form2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:0 14px}
+.form2>*,.stack>*{min-width:0}
+.form2 .full{grid-column:1/-1}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px}
+.card h2{font-size:1.15rem}
+.card h3{font-size:1rem}
+.pill{display:inline-flex;align-items:center;gap:.3rem;font-size:.76rem;font-weight:700;padding:.15rem .55rem;border-radius:99px;background:var(--chip);color:var(--muted);white-space:nowrap}
+.pill.good{background:rgba(11,122,85,.12);color:var(--green)}
+.pill.warn{background:rgba(255,145,0,.15);color:#B45F00}
+.pill.info{background:rgba(47,111,237,.12);color:var(--info)}
+.pill.bad{background:rgba(180,35,24,.12);color:var(--error)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pill.warn{color:var(--orange)}}
+:root[data-theme="dark"] .pill.warn{color:var(--orange)}
+.dot{display:inline-grid;place-items:center;min-width:1.25rem;height:1.25rem;padding:0 .35rem;border-radius:99px;background:var(--orange);color:#0F1A3D;font-size:.72rem;font-weight:800}
+dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:.35rem 1rem;margin:0;font-size:.93rem}
+dl.kv dt{color:var(--muted)}
+dl.kv dd{margin:0;overflow-wrap:anywhere}
 
-/* Telas de acesso */
-.auth{max-width:420px;margin:6vh auto 0}
+/* Topo */
+header{background:var(--navy);color:#fff;position:sticky;top:0;z-index:20;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.bar{max-width:1280px;margin:0 auto;padding:0 16px;display:flex;align-items:center;gap:16px;height:66px}
+.bar>a img{height:34px;width:auto;display:block}
+.bar .tag{font-size:.78rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--orange);border-left:1px solid rgba(255,255,255,.2);padding-left:14px}
+.bar select{width:auto;max-width:260px;background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.25);padding:.4rem .6rem;font-size:.88rem}
+.bar select option{color:#151A2D}
+.acc{margin-left:auto;position:relative}
+.acc-btn{display:flex;align-items:center;gap:.6rem;background:none;border:0;color:#fff;font:inherit;cursor:pointer;padding:.3rem .4rem;border-radius:10px;text-align:left}
+.acc-btn:hover{background:rgba(255,255,255,.08)}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#FF9100,#FFB347);color:#0F1A3D;display:grid;place-items:center;font-weight:800;font-size:.92rem;flex:none;position:relative}
+.avatar .dot{position:absolute;top:-4px;right:-6px;box-shadow:0 0 0 2px var(--navy)}
+.acc-btn small{display:block;color:#C9D0E6;font-size:.75rem;line-height:1.1}
+.acc-btn b{display:block;font-size:.92rem;line-height:1.2;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acc-menu{position:absolute;right:0;top:calc(100% + 8px);width:250px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 40px rgba(0,0,0,.25);padding:.4rem;z-index:30}
+.acc-menu .who{padding:.55rem .7rem .7rem;border-bottom:1px solid var(--line);margin-bottom:.3rem}
+.acc-menu .who b{display:block}
+.acc-menu .who span{font-size:.82rem;color:var(--muted);overflow-wrap:anywhere}
+.acc-menu a,.acc-menu button{display:flex;justify-content:space-between;align-items:center;width:100%;padding:.55rem .7rem;border-radius:8px;color:var(--ink);text-decoration:none;background:none;border:0;font:inherit;cursor:pointer;text-align:left}
+.acc-menu a:hover,.acc-menu button:hover{background:var(--chip)}
+@media (max-width:820px){.bar{gap:10px}.bar .tag,.acc-btn .txt{display:none}.bar select{max-width:150px}}
+
+/* Acesso */
+.auth-wrap{max-width:980px;margin:40px auto;padding:0 16px}
+.auth{display:grid;grid-template-columns:1fr 1.05fr;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 18px 50px rgba(15,26,61,.1)}
+@media (max-width:820px){.auth{grid-template-columns:1fr}.auth .side{display:none}}
+.auth .side{background:radial-gradient(800px 300px at 110% -10%,rgba(255,145,0,.35),transparent 60%),linear-gradient(140deg,var(--navy),var(--navy-2) 60%,var(--navy-3));color:#fff;padding:34px}
+.auth .side h2{font-size:1.6rem;margin-bottom:.4rem}
+.auth .side p{color:#C9D0E6;margin:0 0 1.2rem}
+.auth .side ul{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.auth .side li{display:flex;gap:.7rem;align-items:flex-start}
+.auth .side li b{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:50%;background:rgba(255,145,0,.2);color:var(--orange)}
+.auth .side li span{color:#E5E9F5}
+.auth form{padding:30px 32px}
+@media (max-width:520px){.auth form{padding:22px 18px}}
+.auth form h1{font-size:1.5rem}
 .auth .btn{width:100%;margin-top:.3rem}
 .auth .alt{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-top:1rem;font-size:.92rem}
 .qr{display:flex;justify-content:center;margin:1rem 0;padding:12px;background:#fff;border-radius:10px;border:1px solid var(--line)}
 .qr img{width:200px;height:200px}
 .code{letter-spacing:.4em;font-size:1.4rem;text-align:center;font-family:ui-monospace,Menlo,Consolas,monospace}
 .secret{word-break:break-all;background:var(--chip);border-radius:8px;padding:.5rem .7rem;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem}
-ol.steps{padding-left:1.2rem;margin:.4rem 0 1rem}
-ol.steps li{margin-bottom:.35rem}
+ol.howto{padding-left:1.2rem;margin:.4rem 0 1rem}
+ol.howto li{margin-bottom:.35rem}
 
 /* Painel */
-.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:1rem;margin-bottom:16px}
-.top h1{font-size:1.5rem;margin:0}
-nav.tabs{display:flex;gap:.3rem;overflow-x:auto;border-bottom:1px solid var(--line);margin-bottom:18px}
-nav.tabs button{font:inherit;font-weight:600;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:.6rem .9rem;cursor:pointer;white-space:nowrap}
-nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--orange)}
-nav.tabs .badge{display:inline-block;min-width:1.3rem;padding:0 .35rem;margin-left:.3rem;border-radius:99px;background:var(--orange);color:#0F1A3D;font-size:.75rem;text-align:center}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:16px}
-dl{display:grid;grid-template-columns:max-content 1fr;gap:.35rem 1rem;margin:0}
-dt{color:var(--muted)}
-dd{margin:0;overflow-wrap:anywhere}
-.pill{display:inline-block;font-size:.78rem;font-weight:600;padding:.12rem .55rem;border-radius:99px;background:var(--chip);color:var(--muted);white-space:nowrap}
-.pill.good{background:rgba(11,122,85,.12);color:var(--green)}
-.pill.warn{background:rgba(255,145,0,.15);color:#B45F00}
-.pill.bad{background:rgba(180,35,24,.12);color:var(--error)}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pill.warn{color:var(--orange)}}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:12px 0}
-.tile{background:var(--chip);border-radius:10px;padding:12px 14px}
-.tile b{display:block;font-size:1.4rem;line-height:1.15}
-.tile span{font-size:.82rem;color:var(--muted)}
-.timeline{list-style:none;margin:0;padding:0}
-.timeline li{display:flex;gap:.7rem;align-items:flex-start;padding:.45rem 0}
-.timeline .dot{flex:none;width:1.4rem;height:1.4rem;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:.75rem;margin-top:.1rem}
-.timeline .done .dot{background:var(--green);border-color:var(--green);color:#fff}
-.timeline .now .dot{border-color:var(--orange)}
+.shell{max-width:1280px;margin:0 auto;padding:26px 16px 70px;display:grid;grid-template-columns:240px minmax(0,1fr);gap:22px;align-items:start}
+.shell>section{min-width:0}
+@media (max-width:900px){.shell{grid-template-columns:minmax(0,1fr);padding-top:14px}}
+.side-nav{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px;position:sticky;top:86px}
+.side-nav .me{display:flex;gap:.7rem;align-items:center;padding:.5rem .5rem .8rem;border-bottom:1px solid var(--line);margin-bottom:.4rem}
+.side-nav .me b{display:block;font-size:.95rem;line-height:1.2;overflow-wrap:anywhere}
+.side-nav .me span{font-size:.8rem;color:var(--muted)}
+.side-nav a,.side-nav button{display:flex;align-items:center;gap:.65rem;width:100%;padding:.6rem .7rem;border-radius:9px;color:var(--ink);text-decoration:none;font:inherit;font-weight:500;background:none;border:0;cursor:pointer;text-align:left}
+.side-nav a:hover,.side-nav button:hover{background:var(--chip)}
+.side-nav a[aria-current]{background:var(--cream);font-weight:700;color:var(--orange-d)}
+.side-nav svg{width:18px;height:18px;flex:none}
+.side-nav .dot,.side-nav .cnt{margin-left:auto}
+.side-nav .cnt{font-size:.78rem;color:var(--muted);font-weight:600}
+.side-nav hr{border:0;border-top:1px solid var(--line);margin:.4rem 0}
+@media (max-width:900px){.side-nav{position:static;display:flex;overflow-x:auto;gap:4px;padding:6px}.side-nav .me,.side-nav hr,.side-nav .out,.side-nav .cnt{display:none}.side-nav a{white-space:nowrap;width:auto}}
+.page-h{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;margin-bottom:16px}
+.page-h h1{font-size:1.5rem;margin:0}
+.page-h p{margin:.2rem 0 0;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr));gap:12px;margin-bottom:18px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;text-decoration:none;color:var(--ink);display:block;min-width:0}
+a.kpi:hover{border-color:var(--orange)}
+.kpi b{display:block;font-size:1.85rem;line-height:1.05;font-variant-numeric:tabular-nums}
+.kpi span{color:var(--muted);font-size:.86rem}
+.kpi small{display:block;font-size:.78rem;font-weight:700;margin-top:4px}
+.kpi small.up{color:var(--green)}
+.kpi small.down{color:var(--error)}
+.kpi small.flat{color:var(--muted);font-weight:500}
+.kpi.hot{border-color:var(--orange);background:var(--cream)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:1100px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.stack>*+*{margin-top:14px}
+.row{display:flex;gap:12px;align-items:center;padding:12px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink)}
+.row:last-child{border-bottom:0}
+a.row:hover{background:var(--chip)}
+.th{flex:none;width:52px;height:52px;border-radius:10px;background:var(--img);overflow:hidden;display:grid;place-items:center;font-size:1.3rem}
+.th img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.row .tx{flex:1;min-width:0}
+.row .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .mt{font-size:.82rem;color:var(--muted);display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;margin-top:2px}
+.row .pv{font-size:.86rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.row .pv.new{color:var(--ink);font-weight:600}
+.row .side{text-align:right;font-size:.8rem;color:var(--muted);flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.filters a{padding:.38rem .8rem;border-radius:99px;border:1.5px solid var(--line);text-decoration:none;color:var(--ink);font-size:.88rem;font-weight:600;background:var(--surface)}
+.filters a[aria-current]{border-color:var(--orange);background:var(--cream);color:var(--orange-d)}
+.filters span{color:var(--muted);font-weight:500;margin-left:.25rem}
+.empty{text-align:center;color:var(--muted);padding:34px 18px}
+.big-ico{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin:0 auto 14px;background:var(--chip);font-size:1.8rem}
+.note{background:var(--cream);border:1px solid rgba(255,145,0,.35);border-radius:12px;padding:.75rem .9rem;font-size:.92rem;margin-bottom:16px}
+.card-h{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;flex-wrap:wrap;margin-bottom:.6rem}
+.card-h h2{margin:0}
+.card-h a{font-size:.88rem}
+
+/* Situação do cadastro */
+.journey{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));list-style:none;margin:0 0 18px;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.journey li{padding:12px 10px;font-size:.82rem;color:var(--muted);text-align:center;border-right:1px solid var(--line)}
+.journey li:last-child{border-right:0}
+.journey li b{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;margin:0 auto 6px;background:var(--chip);color:var(--muted);font-size:.8rem}
+.journey li.done{color:var(--ink)}
+.journey li.done b{background:var(--green);color:#fff}
+.journey li.now{color:var(--ink);font-weight:700;background:var(--cream)}
+.journey li.now b{background:var(--orange);color:#0F1A3D}
+.journey small{display:block;font-weight:400;color:var(--muted);font-size:.75rem}
+@media (max-width:640px){.journey{grid-template-columns:repeat(5,minmax(76px,1fr));overflow-x:auto}.journey li{font-size:.74rem;padding:10px 4px}}
+
+/* Gráfico e funil */
+.chart{width:100%;height:auto;display:block}
+.legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.82rem;color:var(--muted);margin-top:.5rem}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:.35rem;vertical-align:-1px}
+.funnel{display:grid;gap:10px}
+.funnel .st{display:grid;grid-template-columns:minmax(0,9rem) minmax(0,1fr) 4.5rem;gap:10px;align-items:center;font-size:.9rem}
+.funnel .tr{height:26px;background:var(--chip);border-radius:7px;overflow:hidden}
+.funnel .fl{height:100%;background:var(--green);border-radius:7px;min-width:3px}
+.funnel .fl.o{background:var(--orange)}
+.funnel .n{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.funnel .rate{grid-column:2/4;font-size:.78rem;color:var(--muted);margin:-6px 0 0}
+.seg{display:inline-flex;background:var(--chip);border-radius:10px;padding:3px}
+.seg a{padding:.35rem .8rem;border-radius:8px;text-decoration:none;color:var(--muted);font-weight:700;font-size:.86rem}
+.seg a[aria-current]{background:var(--surface);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.tbl{width:100%;border-collapse:collapse;font-size:.9rem}
+.tbl th,.tbl td{text-align:left;padding:.6rem .7rem;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl th{font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;white-space:nowrap}
+.tbl td.n,.tbl th.n{text-align:right;font-variant-numeric:tabular-nums}
+.tbl .pn{display:flex;gap:10px;align-items:center;min-width:200px}
+.tbl .pn .th{width:40px;height:40px}
+.scroll{overflow-x:auto}
+.meter{height:8px;background:var(--chip);border-radius:99px;overflow:hidden;margin-top:6px}
+.meter i{display:block;height:100%;background:var(--green);border-radius:99px}
+.meter.mid i{background:var(--orange)}
+.tips{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.tips li{display:flex;gap:.6rem;align-items:flex-start;font-size:.92rem}
+.tips li b{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:.75rem;background:var(--chip);color:var(--muted)}
+.tips li.done b{background:var(--green);color:#fff}
+.tips li.done span{color:var(--muted);text-decoration:line-through}
+.boost{background:radial-gradient(600px 200px at 110% -20%,rgba(255,145,0,.35),transparent 60%),linear-gradient(140deg,var(--navy),var(--navy-2));color:#fff;border:0}
+.boost p{color:#C9D0E6}
+.boost .pill{background:rgba(255,145,0,.2);color:var(--orange)}
+.src{display:grid;grid-template-columns:7rem minmax(0,1fr) 3rem;gap:8px;align-items:center;font-size:.88rem;margin-bottom:8px}
+.src .tr{height:10px;background:var(--chip);border-radius:99px;overflow:hidden}
+.src .fl{height:100%;background:var(--navy-3)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .src .fl{background:var(--info)}}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(220px,100%),1fr));gap:14px}
+.pc{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.pc .ph{aspect-ratio:1/1;overflow:hidden;background:var(--img);display:grid;place-items:center;font-size:2rem;text-decoration:none}
+.pc .ph img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
+.pc .bd{padding:12px 14px;flex:1;display:flex;flex-direction:column;gap:4px}
+.pc .nm{font-weight:600;line-height:1.3}
+.pc .st3{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:auto;padding-top:8px;border-top:1px solid var(--line);font-size:.75rem;color:var(--muted);text-align:center}
+.pc .st3 b{display:block;font-size:1rem;color:var(--ink)}
 .files{list-style:none;margin:0;padding:0}
-.files li{display:flex;justify-content:space-between;align-items:center;gap:.6rem;padding:.5rem 0;border-bottom:1px solid var(--line)}
+.files li{display:flex;justify-content:space-between;align-items:center;gap:.6rem;padding:.55rem 0;border-bottom:1px solid var(--line)}
 .files li:last-child{border-bottom:0}
 .files span{overflow-wrap:anywhere}
-ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
-.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
-.tbl th,.tbl td{text-align:left;padding:.6rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
-.tbl th{font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
-.tbl tr.row{cursor:pointer}
-.tbl tr.row:hover{background:var(--chip)}
-.scroll{overflow-x:auto}
-.empty{padding:28px;text-align:center;color:var(--muted)}
-.form2{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0 14px}
-.form2 .full{grid-column:1/-1}
 
+/* Espaço do pedido */
+.ws-head{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:14px}
+.ws-head h1{font-size:1.35rem;margin:.15rem 0 .2rem}
+.ws{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,1fr);gap:16px;align-items:start}
+@media (max-width:1100px){.ws{grid-template-columns:minmax(0,1fr)}}
+.next{border:2px solid var(--orange);background:var(--cream)}
+.next h3{display:flex;gap:.5rem;align-items:center}
+.quote{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px}
+.quote .pr{font-size:1.2rem;font-weight:800}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:.75rem 1.1rem;border-radius:12px;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:.93rem;max-width:calc(100% - 32px)}
+.wa{position:fixed;right:18px;bottom:18px;z-index:30;background:#25D366;color:#0F1A3D;font-weight:800;border-radius:99px;padding:.7rem 1rem;text-decoration:none;box-shadow:0 6px 18px rgba(0,0,0,.2);font-size:.88rem}
+@media (max-width:640px){.wa{padding:.6rem .8rem;font-size:.8rem}}
 </style>
 </head>
 <body>
-<header><div class="in">
-  <a href="/"><img src="/assets/logo/india-brazil-logo-white.svg" alt="India Brazil"></a>
-  <div class="who" id="who" hidden><span id="whoEmail"></span><button class="btn btn-ghost btn-sm" id="logout" type="button">Sign out</button></div>
-</div></header>
+<header>
+  <div class="bar">
+    <a href="/" aria-label="India Brazil"><img src="/assets/logo/india-brazil-logo-white.svg" alt="India Brazil"></a>
+    <span class="tag">Supplier Centre</span>
+    <select id="pick" aria-label="Choose company" hidden></select>
+    <div class="acc" id="acc" hidden>
+      <button type="button" class="acc-btn" id="accBtn" aria-haspopup="menu" aria-expanded="false"><span class="avatar" id="accAv"></span><span class="txt"><small>Signed in as</small><b id="accName"></b></span></button>
+      <div class="acc-menu" id="accMenu" role="menu" hidden></div>
+    </div>
+  </div>
+</header>
 
 <main>
-  <!-- Entrar -->
-  <form class="card auth" id="vSignin" hidden>
-    <h1>Supplier portal</h1>
-    <p class="muted">Sign in to follow your registration, catalogues and buyer enquiries.</p>
-    <div class="field"><label for="siEmail">Email</label><input id="siEmail" type="email" autocomplete="username" required></div>
-    <div class="field"><label for="siPass">Password</label><input id="siPass" type="password" autocomplete="current-password" required></div>
-    <button class="btn" type="submit">Sign in</button>
-    <p class="err" role="alert"></p>
-    <div class="alt"><button class="link" type="button" data-go="vSignup">Create your account</button><button class="link" type="button" data-go="vForgot">Forgot password?</button></div>
-  </form>
+  <div class="auth-wrap" id="authWrap" hidden><div class="auth">
+    <div class="side">
+      <h2>Sell to Brazil with India Brazil</h2>
+      <p>Your Supplier Centre for the Brazilian B2B marketplace.</p>
+      <ul>
+        <li><b>1</b><span>See how many Brazilian buyers view your products</span></li>
+        <li><b>2</b><span>Answer enquiries and send quotations in one place</span></li>
+        <li><b>3</b><span>Chat with buyers in English: we translate to Portuguese</span></li>
+        <li><b>4</b><span>Our team supports every negotiation</span></li>
+      </ul>
+    </div>
+    <div>
+      <!-- Entrar -->
+      <form id="vSignin" hidden>
+        <h1>Sign in</h1>
+        <p class="muted">Follow your registration, products and buyer enquiries.</p>
+        <div class="field"><label for="siEmail">Email</label><input id="siEmail" type="email" autocomplete="username" required></div>
+        <div class="field"><label for="siPass">Password</label><input id="siPass" type="password" autocomplete="current-password" required></div>
+        <button class="btn" type="submit">Sign in</button>
+        <p class="err" role="alert"></p>
+        <div class="alt"><button class="link" type="button" data-go="vSignup">Create your account</button><button class="link" type="button" data-go="vForgot">Forgot password?</button></div>
+      </form>
 
-  <!-- Criar conta -->
-  <form class="card auth" id="vSignup" hidden>
-    <h1>Create your account</h1>
-    <p class="muted">Use the <b>same email</b> you gave when registering your company. Not registered yet? <a href="/register">Register your company</a> first.</p>
-    <div class="field"><label for="suEmail">Email</label><input id="suEmail" type="email" autocomplete="username" required></div>
-    <div class="field"><label for="suPass">Password</label><input id="suPass" type="password" autocomplete="new-password" minlength="10" required><p class="hint">At least 10 characters.</p></div>
-    <div class="field"><label for="suPass2">Confirm password</label><input id="suPass2" type="password" autocomplete="new-password" required></div>
-    <button class="btn" type="submit">Create account</button>
-    <p class="err" role="alert"></p><p class="ok" role="status"></p>
-    <div class="alt"><button class="link" type="button" data-go="vSignin">I already have an account</button></div>
-  </form>
+      <!-- Criar conta -->
+      <form id="vSignup" hidden>
+        <h1>Create your account</h1>
+        <p class="muted">Use the <b>same email</b> you gave when registering your company. Not registered yet? <a href="/register">Register your company</a> first.</p>
+        <div class="field"><label for="suEmail">Email</label><input id="suEmail" type="email" autocomplete="username" required></div>
+        <div class="field"><label for="suPass">Password</label><input id="suPass" type="password" autocomplete="new-password" minlength="10" required><p class="hint">At least 10 characters.</p></div>
+        <div class="field"><label for="suPass2">Confirm password</label><input id="suPass2" type="password" autocomplete="new-password" required></div>
+        <button class="btn" type="submit">Create account</button>
+        <p class="err" role="alert"></p><p class="ok" role="status"></p>
+        <div class="alt"><button class="link" type="button" data-go="vSignin">I already have an account</button></div>
+      </form>
 
-  <!-- Esqueci a senha -->
-  <form class="card auth" id="vForgot" hidden>
-    <h1>Reset your password</h1>
-    <p class="muted">We will email you a link to choose a new password.</p>
-    <div class="field"><label for="fgEmail">Email</label><input id="fgEmail" type="email" autocomplete="username" required></div>
-    <button class="btn" type="submit">Send reset link</button>
-    <p class="err" role="alert"></p><p class="ok" role="status"></p>
-    <div class="alt"><button class="link" type="button" data-go="vSignin">Back to sign in</button></div>
-  </form>
+      <!-- Esqueci a senha -->
+      <form id="vForgot" hidden>
+        <h1>Reset your password</h1>
+        <p class="muted">We will email you a link to choose a new password.</p>
+        <div class="field"><label for="fgEmail">Email</label><input id="fgEmail" type="email" autocomplete="username" required></div>
+        <button class="btn" type="submit">Send reset link</button>
+        <p class="err" role="alert"></p><p class="ok" role="status"></p>
+        <div class="alt"><button class="link" type="button" data-go="vSignin">Back to sign in</button></div>
+      </form>
 
-  <!-- Ativar 2FA (obrigatório no primeiro acesso) -->
-  <form class="card auth" id="vEnroll" hidden>
-    <h1>Protect your account</h1>
-    <p class="muted">Two-step verification is required. You will need a code from your phone each time you sign in.</p>
-    <ol class="steps">
-      <li>Install an authenticator app: Google Authenticator, Microsoft Authenticator or Authy.</li>
-      <li>In the app, tap <b>+</b> and scan this QR code.</li>
-      <li>Type the 6-digit code shown in the app.</li>
-    </ol>
-    <div class="qr"><img id="qr" alt="QR code for your authenticator app"></div>
-    <p class="hint">Cannot scan? Enter this key in the app instead:</p>
-    <p class="secret" id="secret"></p>
-    <div class="field"><label for="enCode">6-digit code</label><input id="enCode" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>
-    <button class="btn" type="submit">Turn on two-step verification</button>
-    <p class="err" role="alert"></p>
-  </form>
+      <!-- Ativar 2FA (quando REQUIRE_2FA=true) -->
+      <form id="vEnroll" hidden>
+        <h1>Protect your account</h1>
+        <p class="muted">Two-step verification is required. You will need a code from your phone each time you sign in.</p>
+        <ol class="howto">
+          <li>Install an authenticator app: Google Authenticator, Microsoft Authenticator or Authy.</li>
+          <li>In the app, tap <b>+</b> and scan this QR code.</li>
+          <li>Type the 6-digit code shown in the app.</li>
+        </ol>
+        <div class="qr"><img id="qr" alt="QR code for your authenticator app"></div>
+        <p class="hint">Cannot scan? Enter this key in the app instead:</p>
+        <p class="secret" id="secret"></p>
+        <div class="field"><label for="enCode">6-digit code</label><input id="enCode" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>
+        <button class="btn" type="submit">Turn on two-step verification</button>
+        <p class="err" role="alert"></p>
+      </form>
 
-  <!-- Código 2FA no login -->
-  <form class="card auth" id="vChallenge" hidden>
-    <h1>Two-step verification</h1>
-    <p class="muted">Open your authenticator app and type the 6-digit code for <b>India Brazil</b>.</p>
-    <div class="field"><label for="chCode">6-digit code</label><input id="chCode" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>
-    <button class="btn" type="submit">Verify</button>
-    <p class="err" role="alert"></p>
-    <p class="hint">Lost your phone? Contact us on WhatsApp and we will reset your verification after confirming your identity.</p>
-  </form>
+      <!-- Código 2FA no login -->
+      <form id="vChallenge" hidden>
+        <h1>Two-step verification</h1>
+        <p class="muted">Open your authenticator app and type the 6-digit code for <b>India Brazil</b>.</p>
+        <div class="field"><label for="chCode">6-digit code</label><input id="chCode" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>
+        <button class="btn" type="submit">Verify</button>
+        <p class="err" role="alert"></p>
+        <p class="hint">Lost your phone? Contact us on WhatsApp and we will reset your verification after confirming your identity.</p>
+      </form>
 
-  <!-- Nova senha (link do e-mail) -->
-  <form class="card auth" id="vNewpass" hidden>
-    <h1>Choose a new password</h1>
-    <div class="field"><label for="npPass">New password</label><input id="npPass" type="password" autocomplete="new-password" minlength="10" required><p class="hint">At least 10 characters.</p></div>
-    <div class="field"><label for="npPass2">Confirm new password</label><input id="npPass2" type="password" autocomplete="new-password" required></div>
-    <button class="btn" type="submit">Save new password</button>
-    <p class="err" role="alert"></p>
-  </form>
+      <!-- Nova senha (link do e-mail) -->
+      <form id="vNewpass" hidden>
+        <h1>Choose a new password</h1>
+        <div class="field"><label for="npPass">New password</label><input id="npPass" type="password" autocomplete="new-password" minlength="10" required><p class="hint">At least 10 characters.</p></div>
+        <div class="field"><label for="npPass2">Confirm new password</label><input id="npPass2" type="password" autocomplete="new-password" required></div>
+        <button class="btn" type="submit">Save new password</button>
+        <p class="err" role="alert"></p>
+      </form>
+
+      <!-- Sem cadastro com este e-mail -->
+      <div id="vNone" style="padding:30px 32px" hidden></div>
+    </div>
+  </div></div>
 
   <!-- Painel -->
-  <section id="vApp" hidden>
-    <div class="top">
-      <div><div class="muted" id="appRef"></div><h1 id="appName"></h1></div>
-      <select id="pick" aria-label="Choose company" hidden></select>
-    </div>
-    <nav class="tabs" role="tablist">
-      <button type="button" role="tab" data-tab="overview">Overview</button>
-      <button type="button" role="tab" data-tab="profile">Company profile</button>
-      <button type="button" role="tab" data-tab="catalogues">Catalogues</button>
-      <button type="button" role="tab" data-tab="enquiries">Enquiries<span class="badge" id="openCount" hidden></span></button>
-      <button type="button" role="tab" data-tab="security">Security</button>
-    </nav>
-    <div id="pane"></div>
-  </section>
-
-  <div class="card auth empty" id="vNone" hidden></div>
-  <p class="err" id="appErr" role="alert"></p>
+  <div id="vApp"><p class="empty">Loading your Supplier Centre…</p></div>
 </main>
+<a class="wa" href="https://wa.me/5547996390456?text=Hello!%20I%20need%20help%20with%20my%20India%20Brazil%20supplier%20account." target="_blank" rel="noopener">Help on WhatsApp</a>
 
 <script>
 (function(){
   var SUPABASE_URL="https://fwlgkmtttaelntnibifd.supabase.co";
   var SUPABASE_ANON_KEY="sb_publishable_rOCe8m9bS5WTyUhS59fsQA_FEoMGE4C"; // publishable: só funciona com as regras do banco
-  var BUCKET="catalogues", PORTAL=location.origin+"/portal";
+  var BUCKET="catalogues", PORTAL=location.origin+"/portal", IMG=SUPABASE_URL+"/storage/v1/object/public/product-images/";
+  var WA="https://wa.me/5547996390456?text=";
   var REG={new:["Received","warn"],in_review:["Under review","warn"],verified:["Verified","good"],published:["Live on marketplace","good"],rejected:["Not approved","bad"]};
-  var RFQ={open:["New enquiry","warn"],quoted:["Quote sent","good"],negotiating:["In negotiation","warn"],won:["Order confirmed","good"],lost:["Not selected","bad"],closed:["Closed",""]};
   var CUR=["USD","INR","EUR","BRL"], INCO=["FOB","CIF","CFR","EXW","FCA","DAP","DDP"];
 
-  // Sessão guardada separada da do /admin: entrar no portal não derruba o login de administrador
+  // Sessão guardada separada da do /admin e da do comprador
   // 2FA (código do app autenticador) desligado por enquanto. Para religar: REQUIRE_2FA=true aqui
   // e rodar de novo a função has_2fa() do docs/portal-setup.sql no Supabase.
   var REQUIRE_2FA=false;
   var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{storageKey:"ib-portal-auth"}});
   var $=function(id){return document.getElementById(id);};
-  var VIEWS=["vSignin","vSignup","vForgot","vEnroll","vChallenge","vNewpass","vApp","vNone"];
-  var recovering=/type=recovery/.test(location.hash), me=null, suppliers=[], sup=null, tab="overview", chan=null, enrollId=null;
+  var FORMS=["vSignin","vSignup","vForgot","vEnroll","vChallenge","vNewpass","vNone"];
+  var recovering=/type=recovery/.test(location.hash), me=null, suppliers=[], sup=null, chat=null, live=null, enrollId=null;
+  var S={rfqs:[],inbox:{},products:[],dash:null,dashErr:false}; // dados do painel do fornecedor escolhido
 
-  // Monta elementos sem innerHTML (dados vêm de usuários)
+  // ---------- utilidades (elementos montados sem innerHTML: dados vêm de usuários) ----------
   function h(tag,attrs,kids){
     var e=document.createElement(tag);
     Object.keys(attrs||{}).forEach(function(k){
       if(k==="class")e.className=attrs[k];else if(k.slice(0,2)==="on")e.addEventListener(k.slice(2),attrs[k]);else if(attrs[k]!=null&&attrs[k]!==false)e.setAttribute(k,attrs[k]===true?"":attrs[k]);
     });
-    [].concat(kids==null?[]:kids).forEach(function(c){if(c==null||c===false)return;e.appendChild(typeof c==="object"?c:document.createTextNode(String(c)));});
+    [].concat(kids==null?[]:kids).flat(Infinity).forEach(function(c){if(c==null||c===false)return;e.appendChild(typeof c==="object"?c:document.createTextNode(String(c)));});
     return e;
   }
   function txt(v){return v==null||v===""||(Array.isArray(v)&&!v.length)?"–":Array.isArray(v)?v.join(", "):String(v);}
   // Datas sem hora (2026-11-01) são lidas no fuso local, senão aparecem um dia antes
   function date(v){if(/^\d{4}-\d{2}-\d{2}$/.test(v||""))v+="T00:00:00";return v?new Date(v).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}):"–";}
-  function when(v){return new Date(v).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});}
-  function pill(map,k){var p=map[k]||[k,""];return h("span",{class:"pill "+p[1]},p[0]);}
-  function dl(pairs){return h("dl",null,pairs.reduce(function(a,p){a.push(h("dt",null,p[0]),h("dd",null,p[1]&&p[1].nodeType?p[1]:txt(p[1])));return a;},[]));}
-  function one(v){return Array.isArray(v)?v[0]||null:v||null;}
-  function fail(e){console.error(e);$("appErr").textContent="Something went wrong: "+((e&&e.message)||e);}
-  function show(id){
-    VIEWS.forEach(function(v){$(v).hidden=v!==id;});
-    $("appErr").textContent="";
-    var f=$(id).querySelector("input");if(f&&id!=="vApp")setTimeout(function(){f.focus();},0);
+  function ago(v){
+    if(!v)return"";var d=(Date.now()-new Date(v))/1000;
+    if(d<60)return"just now";if(d<3600)return Math.floor(d/60)+" min ago";if(d<86400)return Math.floor(d/3600)+" h ago";if(d<7*86400)return Math.floor(d/86400)+" d ago";
+    return new Date(v).toLocaleDateString("en-IN",{day:"numeric",month:"short"});
   }
+  function num(n){return n==null?"–":Number(n).toLocaleString("en-IN");}
+  function pct(a,b){return b?Math.round(a*1000/b)/10+"%":"–";}
+  function money(v,cur){try{return new Intl.NumberFormat("en-IN",{style:"currency",currency:cur||"USD",maximumFractionDigits:4}).format(v);}catch(e){return v+" "+(cur||"");}}
+  function dl(pairs){return h("dl",{class:"kv"},pairs.map(function(p){return [h("dt",null,p[0]),h("dd",null,p[1]&&p[1].nodeType?p[1]:txt(p[1]))];}));}
+  function one(v){return Array.isArray(v)?v[0]||null:v||null;}
+  function initials(n){var p=(n||"?").trim().split(/\s+/);return ((p[0]||"?")[0]+(p.length>1?p[p.length-1][0]:"")).toUpperCase();}
+  function toast(t){var o=document.querySelector(".toast");if(o)o.remove();var e=h("div",{class:"toast",role:"status"},t);document.body.appendChild(e);setTimeout(function(){e.remove();},3800);}
+  function fail(e){console.error(e);toast("Something went wrong: "+((e&&e.message)||e));}
   function msg(form,err,ok){form.querySelector(".err").textContent=err||"";var o=form.querySelector(".ok");if(o)o.textContent=ok||"";}
   function busy(form,on){Array.prototype.forEach.call(form.querySelectorAll("button"),function(b){b.disabled=on;});}
   function strong(p){return p.length>=10;}
+  function sel(id,opts,val){var s=h("select",{id:id});opts.forEach(function(o){s.appendChild(h("option",{value:o},o));});s.value=val;return s;}
+  function thumb(path){return h("div",{class:"th"},path?h("img",{src:IMG+path,alt:"",loading:"lazy"}):"📦");}
+  function wa(t){return WA+encodeURIComponent(t);}
 
-  document.querySelectorAll("[data-go]").forEach(function(b){b.addEventListener("click",function(){show(b.dataset.go);});});
+  // ---------- acesso ----------
+  function showForm(id){
+    $("authWrap").hidden=false;$("vApp").hidden=true;$("acc").hidden=true;$("pick").hidden=true;stopChat();
+    FORMS.forEach(function(v){$(v).hidden=v!==id;});
+    var f=$(id).querySelector("input");if(f)setTimeout(function(){f.focus();},0);
+  }
+  document.querySelectorAll("[data-go]").forEach(function(b){b.addEventListener("click",function(){showForm(b.dataset.go);});});
 
-  // --- Acesso ---
   $("vSignin").addEventListener("submit",async function(ev){
     ev.preventDefault();var f=this;msg(f);busy(f,true);
     var r=await sb.auth.signInWithPassword({email:$("siEmail").value.trim(),password:$("siPass").value});
     busy(f,false);
     if(r.error){msg(f,r.error.code==="email_not_confirmed"?"Please confirm your email first: open the link we sent you.":r.error.code==="invalid_credentials"?"Incorrect email or password.":r.error.message);return;}
-    $("siPass").value="";route();
+    $("siPass").value="";start();
   });
 
   $("vSignup").addEventListener("submit",async function(ev){
@@ -290,7 +449,7 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
     var r=await sb.auth.mfa.challengeAndVerify({factorId:enrollId,code:$("enCode").value.trim()});
     busy(f,false);
     if(r.error)return msg(f,"That code did not work. Check the time on your phone and try the newest code.");
-    $("enCode").value="";route();
+    $("enCode").value="";start();
   });
 
   $("vChallenge").addEventListener("submit",async function(ev){
@@ -299,7 +458,7 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
     var r=await sb.auth.mfa.challengeAndVerify({factorId:fs.totp[0].id,code:$("chCode").value.trim()});
     busy(f,false);
     if(r.error)return msg(f,"That code did not work. Try the newest code in your app.");
-    $("chCode").value="";route();
+    $("chCode").value="";start();
   });
 
   $("vNewpass").addEventListener("submit",async function(ev){
@@ -310,74 +469,182 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
     var r=await sb.auth.updateUser({password:$("npPass").value});
     busy(f,false);
     if(r.error)return msg(f,r.error.message);
-    $("npPass").value=$("npPass2").value="";recovering=false;history.replaceState(null,"",location.pathname);route();
+    $("npPass").value=$("npPass2").value="";recovering=false;history.replaceState(null,"",location.pathname);start();
   });
 
-  $("logout").addEventListener("click",async function(){stopChat();await sb.auth.signOut();me=null;route();});
-  sb.auth.onAuthStateChange(function(ev){if(ev==="PASSWORD_RECOVERY"){recovering=true;setTimeout(route,0);}});
+  async function logout(){
+    if(live){sb.removeChannel(live);live=null;}stopChat();
+    await sb.auth.signOut();me=null;sup=null;history.replaceState(null,"",location.pathname);start();
+  }
+  sb.auth.onAuthStateChange(function(ev){if(ev==="PASSWORD_RECOVERY"){recovering=true;setTimeout(start,0);}});
 
-  // Decide qual tela mostrar: login → 2FA (cadastrar ou digitar código) → nova senha → painel
-  async function route(){
+  // Decide o que mostrar: login → 2FA (se ligado) → nova senha → painel
+  async function start(){
     var s=(await sb.auth.getSession()).data.session;
-    if(!s){$("who").hidden=true;show(recovering?"vForgot":"vSignin");return;}
-    $("whoEmail").textContent=s.user.email;$("who").hidden=false;
+    if(!s)return showForm(recovering?"vForgot":"vSignin");
     var fs=(await sb.auth.mfa.listFactors()).data||{all:[],totp:[]};
     if(REQUIRE_2FA&&!fs.totp.length)return enroll(fs);
     var aal=(await sb.auth.mfa.getAuthenticatorAssuranceLevel()).data;
-    if(REQUIRE_2FA&&aal.currentLevel!=="aal2")return show("vChallenge");
-    if(recovering)return show("vNewpass");
-    loadApp(s.user).catch(fail);
+    if(REQUIRE_2FA&&aal.currentLevel!=="aal2")return showForm("vChallenge");
+    if(recovering)return showForm("vNewpass");
+    me=s.user;
+    var r=await sb.from("suppliers").select("*").order("created_at",{ascending:false});
+    if(r.error)throw r.error;
+    suppliers=r.data;
+    if(!suppliers.length){
+      var n=$("vNone");n.textContent="";
+      n.appendChild(h("h1",{style:"font-size:1.4rem"},"No registration found"));
+      n.appendChild(h("p",null,["We could not find a company registered with ",h("b",null,me.email),"."]));
+      n.appendChild(h("p",{class:"muted"},"Please register your company using this same email, or contact us on WhatsApp if you registered with a different one."));
+      n.appendChild(h("div",{style:"display:flex;gap:10px;flex-wrap:wrap"},[h("a",{class:"btn",href:"/register"},"Register your company"),h("button",{class:"btn btn-ghost",type:"button",onclick:logout},"Sign out")]));
+      return showForm("vNone");
+    }
+    var p=$("pick");p.textContent="";
+    suppliers.forEach(function(x,i){p.appendChild(h("option",{value:i},x.company_name+" ("+x.reference+")"));});
+    var saved=+(localStorage.getItem("ib-portal-sup")||0);
+    p.value=suppliers[saved]?saved:0;
+    await pickSupplier(+p.value);
   }
-
   async function enroll(fs){
     // Apaga tentativas antigas não concluídas antes de gerar um QR novo
     for(var i=0;i<fs.all.length;i++)if(fs.all[i].status!=="verified")await sb.auth.mfa.unenroll({factorId:fs.all[i].id});
     var r=await sb.auth.mfa.enroll({factorType:"totp",friendlyName:"India Brazil "+new Date().toISOString().slice(0,10)});
     if(r.error)return fail(r.error);
     enrollId=r.data.id;$("qr").src=r.data.totp.qr_code;$("secret").textContent=r.data.totp.secret;
-    show("vEnroll");
+    showForm("vEnroll");
   }
-
-  // --- Painel ---
-  async function loadApp(user){
-    me=user;
-    var r=await sb.from("suppliers").select("*").order("created_at",{ascending:false});
-    if(r.error)return fail(r.error);
-    suppliers=r.data;
-    if(!suppliers.length){
-      var n=$("vNone");n.textContent="";
-      n.appendChild(h("h2",null,"No registration found"));
-      n.appendChild(h("p",null,["We could not find a company registered with ",h("b",null,user.email),"."]));
-      n.appendChild(h("p",{class:"muted"},"Please register your company using this same email, or contact us on WhatsApp if you registered with a different one."));
-      n.appendChild(h("a",{class:"btn",href:"/register"},"Register your company"));
-      return show("vNone");
-    }
-    var p=$("pick");p.textContent="";
-    suppliers.forEach(function(s,i){p.appendChild(h("option",{value:i},s.company_name+" ("+s.reference+")"));});
-    p.hidden=suppliers.length<2;
-    pickSupplier(0);
-    show("vApp");
-  }
-  $("pick").addEventListener("change",function(){pickSupplier(+this.value);});
+  $("pick").addEventListener("change",function(){try{localStorage.setItem("ib-portal-sup",this.value);}catch(e){}pickSupplier(+this.value).catch(fail);});
   async function pickSupplier(i){
     sup=suppliers[i];
-    $("appName").textContent=sup.company_name;$("appRef").textContent="Reference "+sup.reference;
-    await countOpen();
-    openTab(tab);
-  }
-  // Número de pedidos novos (sem cotação) ao lado da aba Enquiries
-  async function countOpen(){
-    var c=await sb.from("rfqs").select("id",{count:"exact",head:true}).eq("supplier_id",sup.id).eq("status","open");
-    $("openCount").textContent=c.count||"";$("openCount").hidden=!c.count;
-  }
-  document.querySelectorAll("nav.tabs button").forEach(function(b){b.addEventListener("click",function(){openTab(b.dataset.tab);});});
-  function openTab(t,arg){
-    tab=t;stopChat();
-    document.querySelectorAll("nav.tabs button").forEach(function(b){b.setAttribute("aria-selected",b.dataset.tab===t);});
-    var p=$("pane");p.textContent="";$("appErr").textContent="";
-    ({overview:overview,profile:profile,catalogues:catalogues,enquiries:enquiries,security:security})[t](p,arg).catch(fail);
+    if(!$("vApp").querySelector(".shell"))$("vApp").replaceChildren(h("p",{class:"empty"},"Loading your Supplier Centre…"));
+    $("authWrap").hidden=true;$("vApp").hidden=false;$("acc").hidden=false;$("pick").hidden=suppliers.length<2;
+    await loadData();listen();route();
   }
 
+  // ---------- dados ----------
+  async function loadData(){
+    var r=await sb.from("rfqs").select("id,code,created_at,updated_at,product,product_id,buyer_label,quantity,unit,status,request_type,needed_by,products(image_path)").eq("supplier_id",sup.id).order("created_at",{ascending:false});
+    if(r.error)throw r.error;
+    var ib=await sb.rpc("supplier_inbox");
+    var pr=await sb.from("products").select("id,name,category,image_path,price_min,price_max,currency,price_unit,moq,description,code,variant_count,created_at").eq("supplier_id",sup.id).eq("published",true).order("name");
+    S.rfqs=r.data;S.inbox={};S.products=pr.error?[]:pr.data;
+    (ib.error?[]:ib.data).forEach(function(x){S.inbox[x.rfq_id]=x;});
+    renderTop();
+  }
+  // Números da vitrine (precisam do docs/supplier-analytics.sql); em caso de erro o painel mostra só os pedidos
+  var dashCache={};
+  async function dash(days){
+    var k=sup.id+":"+days;
+    if(dashCache[k]&&Date.now()-dashCache[k].t<60000)return dashCache[k].d;
+    var r=await sb.rpc("supplier_dashboard",{p_supplier:sup.id,p_days:days});
+    if(r.error){console.warn("supplier_dashboard",r.error);return null;}
+    dashCache[k]={t:Date.now(),d:r.data};return r.data;
+  }
+  // Atualiza contadores quando chega mensagem ou pedido novo (o Realtime só entrega o que é deste fornecedor)
+  function listen(){
+    if(live){sb.removeChannel(live);live=null;}
+    var t=null,again=function(){clearTimeout(t);t=setTimeout(function(){loadData().then(function(){if(!/^#\/enquiry\//.test(location.hash))route(true);}).catch(function(){});},600);};
+    live=sb.channel("supplier-"+sup.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"rfq_messages"},again)
+      .on("postgres_changes",{event:"INSERT",schema:"public",table:"rfqs"},again).subscribe();
+  }
+  async function markRead(rfqId){
+    var r=await sb.from("rfq_reads").upsert({user_id:me.id,rfq_id:rfqId,last_read_at:new Date().toISOString()});
+    if(!r.error&&S.inbox[rfqId]){S.inbox[rfqId].unread=0;renderTop();
+      var d=document.querySelector('.side-nav a[href="#/messages"] .dot');if(d){var u=totalUnread();if(u)d.textContent=u;else d.remove();}}
+  }
+
+  // Situação do pedido do ponto de vista do fornecedor
+  function sit(r){
+    var ib=S.inbox[r.id]||{};
+    if(r.status==="won")return {k:"done",t:"Order confirmed",c:"good"};
+    if(r.status==="lost")return {k:"done",t:"Not selected",c:"bad"};
+    if(r.status==="closed")return {k:"done",t:"Closed",c:""};
+    if(r.status==="negotiating")return {k:"neg",t:"In negotiation",c:"info"};
+    if(+ib.unread>0)return {k:"reply",t:"Buyer replied",c:"warn"};
+    if(+ib.quotes>0||r.status==="quoted")return {k:"quoted",t:"Quotation sent",c:"good"};
+    return {k:"new",t:"Awaiting your quotation",c:"warn"};
+  }
+  function unread(id){return +((S.inbox[id]||{}).unread)||0;}
+  function totalUnread(){return S.rfqs.reduce(function(n,r){return n+unread(r.id);},0);}
+  function needsAction(){return S.rfqs.filter(function(r){var k=sit(r).k;return k==="new"||k==="reply";});}
+
+  // ---------- estrutura ----------
+  var ICON={
+    home:'<path d="M3 9.5 10 4l7 5.5V17a1 1 0 0 1-1 1h-4v-5H8v5H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+    list:'<path d="M7 5h10M7 10h10M7 15h10M3.5 5h.01M3.5 10h.01M3.5 15h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+    chat:'<path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h9A2.5 2.5 0 0 1 17 5.5v6a2.5 2.5 0 0 1-2.5 2.5H9l-4 3v-3h0A2 2 0 0 1 3 12z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+    chart:'<path d="M3 17h14M5.5 14V9M10 14V5M14.5 14v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+    box:'<path d="M3 6.5 10 3l7 3.5v7L10 17l-7-3.5zM3 6.5 10 10l7-3.5M10 10v7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+    file:'<path d="M5 2.5h6.5L15.5 6.5V17a.5.5 0 0 1-.5.5H5a.5.5 0 0 1-.5-.5V3a.5.5 0 0 1 .5-.5zM11.5 2.5v4h4M7 10.5h6M7 13.5h6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>',
+    building:'<path d="M4 17V4.5A1.5 1.5 0 0 1 5.5 3h6A1.5 1.5 0 0 1 13 4.5V17M13 8h2.5A1.5 1.5 0 0 1 17 9.5V17M2.5 17h15M7 6.5h3M7 9.5h3M7 12.5h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+    lock:'<rect x="4" y="9" width="12" height="8.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+    shop:'<path d="M3.5 8.5V17h13V8.5M2.5 4h15l-1 4.5H3.5zM8 17v-4.5h4V17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+    out:'<path d="M12 4H5.5A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H12M9 10h8m-3-3 3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'
+  };
+  function ico(k){var s=document.createElementNS("http://www.w3.org/2000/svg","svg");s.setAttribute("viewBox","0 0 20 20");s.setAttribute("aria-hidden","true");s.innerHTML=ICON[k];return s;}
+  var NAV=[["#/","Dashboard","home"],["#/enquiries","Enquiries","list"],["#/messages","Messages","chat"],["#/performance","Performance","chart"],["#/products","Products in showcase","box"],null,["#/catalogues","Catalogues","file"],["#/profile","Company profile","building"],["#/security","Login & security","lock"]];
+  function renderTop(){
+    var n=sup.contact_name||me.email,u=totalUnread();
+    $("accName").textContent=sup.company_name;
+    var av=$("accAv");av.textContent=initials(sup.company_name);if(u)av.appendChild(h("span",{class:"dot"},String(u)));
+    var m=$("accMenu");m.textContent="";
+    m.appendChild(h("div",{class:"who"},[h("b",null,n),h("span",null,sup.company_name+" · "+sup.reference+" · "+me.email)]));
+    NAV.forEach(function(x){if(!x)return;m.appendChild(h("a",{href:x[0],role:"menuitem"},[x[1],x[0]==="#/messages"&&u?h("span",{class:"dot"},String(u)):null]));});
+    if(sup.status==="published")m.appendChild(h("a",{href:"/marketplace/fornecedor/"+sup.id,target:"_blank",rel:"noopener",role:"menuitem"},"View my showcase ↗"));
+    m.appendChild(h("button",{type:"button",role:"menuitem",onclick:logout},"Sign out"));
+  }
+  $("accBtn").addEventListener("click",function(){var m=$("accMenu");m.hidden=!m.hidden;$("accBtn").setAttribute("aria-expanded",!m.hidden);});
+  document.addEventListener("mousedown",function(e){if(!$("acc").contains(e.target)){$("accMenu").hidden=true;$("accBtn").setAttribute("aria-expanded","false");}});
+
+  function shell(active,content){
+    var v=$("vApp");v.textContent="";
+    var u=totalUnread(),todo=needsAction().length;
+    var nav=h("nav",{class:"side-nav","aria-label":"Supplier Centre"},[
+      h("div",{class:"me"},[h("span",{class:"avatar"},initials(sup.company_name)),h("div",{style:"min-width:0"},[h("b",null,sup.company_name),h("span",null,sup.reference)])]),
+      NAV.map(function(x){
+        if(!x)return h("hr");
+        var badge=x[0]==="#/messages"?u:x[0]==="#/enquiries"?todo:0;
+        return h("a",{href:x[0],"aria-current":x[0]===active?"page":null},[ico(x[2]),x[1],
+          badge?h("span",{class:"dot"},String(badge)):x[0]==="#/products"?h("span",{class:"cnt"},String(S.products.length)):null]);
+      }),
+      sup.status==="published"?h("a",{href:"/marketplace/fornecedor/"+sup.id,target:"_blank",rel:"noopener"},[ico("shop"),"My showcase ↗"]):null,
+      h("hr"),h("button",{type:"button",class:"out",onclick:logout},[ico("out"),"Sign out"])
+    ]);
+    v.appendChild(h("div",{class:"shell"},[nav,h("section",null,content)]));
+    window.scrollTo(0,0);
+  }
+  function pageH(title,sub,action){return h("div",{class:"page-h"},[h("div",null,[h("h1",null,title),sub?h("p",null,sub):null]),action||null]);}
+  function rfqRow(r,opt){
+    var s=sit(r),ib=S.inbox[r.id]||{},u=unread(r.id),p=one(r.products)||{};
+    var who=ib.last_role==="supplier"?"You":ib.last_role==="team"?"India Brazil team":ib.last_role?"Buyer":null;
+    return h("a",{class:"row",href:"#/enquiry/"+r.id},[thumb(p.image_path),
+      h("div",{class:"tx"},[h("div",{class:"nm"},r.product),
+        opt&&opt.preview&&ib.last_body?h("div",{class:"pv"+(u?" new":"")},who+": "+ib.last_body)
+          :h("div",{class:"mt"},[h("span",{class:"mono"},r.code),h("span",null,"· "+r.buyer_label),r.quantity!=null?"· "+num(r.quantity)+" "+(r.unit||""):null,r.request_type==="sample"?h("span",{class:"pill"},"Sample"):null])]),
+      h("div",{class:"side"},[h("span",{class:"pill "+s.c},s.t),h("span",null,ago(ib.last_at||r.created_at)),u?h("span",{class:"dot",title:"Unread messages"},String(u)):null])
+    ]);
+  }
+  // Variação contra o período anterior
+  function delta(cur,prev){
+    if(prev==null)return null;
+    if(!prev&&!cur)return h("small",{class:"flat"},"no change");
+    if(!prev)return h("small",{class:"up"},"▲ new");
+    var d=Math.round((cur-prev)*100/prev);
+    return h("small",{class:d>0?"up":d<0?"down":"flat"},(d>0?"▲ ":d<0?"▼ ":"")+Math.abs(d)+"% vs previous");
+  }
+  function kpi(value,label,opt){
+    opt=opt||{};
+    return h(opt.href?"a":"div",{class:"kpi"+(opt.hot?" hot":""),href:opt.href||null,title:opt.title||null},[h("b",null,value),h("span",null,label),opt.delta||null]);
+  }
+
+  // Etapas do cadastro até a vitrine
+  function journey(cat){
+    var hasCat=(sup.catalogue_files||[]).length||sup.catalogue_link;
+    var steps=[["Registered",true,date(sup.created_at)],["Catalogue received",!!hasCat,""],["Catalogue processed",!!(cat&&cat.summary),""],
+      ["Verified",["verified","published"].indexOf(sup.status)>-1,""],["Live on marketplace",sup.status==="published",S.products.length?S.products.length+" products":""]];
+    var now=steps.findIndex(function(s){return !s[1];});
+    return h("ol",{class:"journey"},steps.map(function(s,i){return h("li",{class:s[1]?"done":i===now?"now":""},[h("b",null,s[1]?"✓":String(i+1)),s[0],s[2]?h("small",null,s[2]):null]);}));
+  }
   async function catalogueState(){
     var m=await sb.from("catalogue_summaries").select("summary,updated_at").eq("supplier_id",sup.id).maybeSingle();
     var j=await sb.from("catalogue_jobs").select("status").eq("supplier_id",sup.id).maybeSingle();
@@ -385,131 +652,190 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
     return {summary:m.data,job:j.data};
   }
 
-  async function overview(p){
-    var cs=await catalogueState();
-    var hasCat=(sup.catalogue_files||[]).length||sup.catalogue_link;
-    var steps=[
-      ["Registration received",true,date(sup.created_at)],
-      ["Catalogue received",!!hasCat,hasCat?"":"Send us your catalogue on WhatsApp"],
-      ["Catalogue processed by our team",!!cs.summary,cs.summary?date(cs.summary.updated_at):""],
-      ["Company verified",["verified","published"].indexOf(sup.status)>-1,""],
-      ["Live on the India Brazil marketplace",sup.status==="published",""]
+  // Qualidade do anúncio: o que falta para o produto converter mais
+  function quality(p){
+    var miss=[];
+    if(!p.image_path)miss.push("photo");
+    if(p.price_min==null&&p.price_max==null)miss.push("price");
+    if(!p.moq)miss.push("minimum order");
+    if(!p.description||p.description.length<80)miss.push("description");
+    return {score:100-miss.length*25,miss:miss};
+  }
+  // Dicas para aparecer mais e receber mais pedidos (cada uma marcada quando já foi feita)
+  function tips(d){
+    var noPrice=S.products.filter(function(p){return p.price_min==null&&p.price_max==null;}).length;
+    var noPhoto=S.products.filter(function(p){return !p.image_path;}).length;
+    var waiting=S.rfqs.filter(function(r){return sit(r).k==="new";}).length;
+    var rate=d&&d.rfqs?d.answered/d.rfqs:null;
+    var list=[
+      [!waiting,waiting?"Send a quotation for "+waiting+" waiting enquir"+(waiting>1?"ies":"y"):"Every enquiry has a reply"],
+      [d&&d.avg_response_hours!=null?d.avg_response_hours<=24:!waiting,"Reply to buyers within 24 hours"],
+      [!noPrice,noPrice?"Add a reference price to "+noPrice+" product"+(noPrice>1?"s":""):"All products show a reference price"],
+      [!noPhoto,noPhoto?"Send photos for "+noPhoto+" product"+(noPhoto>1?"s":""):"All products have a photo"],
+      [(sup.certifications||[]).length>0,"Share your certifications (ISO, BIS, organic…)"],
+      [rate==null||rate>=0.9,"Keep your response rate above 90%"]
     ];
-    var firstOpen=steps.findIndex(function(s){return !s[1];});
-    p.appendChild(h("div",{class:"grid"},[
-      h("div",{class:"card"},[h("h3",null,"Registration status"),h("p",null,pill(REG,sup.status)),
-        h("ul",{class:"timeline"},steps.map(function(s,i){
-          return h("li",{class:s[1]?"done":i===firstOpen?"now":""},[h("span",{class:"dot","aria-hidden":"true"},s[1]?"✓":""),h("div",null,[h("div",null,s[0]),s[2]?h("div",{class:"muted",style:"font-size:.85rem"},s[2]):null])]);
-        }))]),
-      h("div",{class:"card"},[h("h3",null,"Buyer enquiries"),h("p",{class:"muted"},"Brazilian buyers interested in your products will appear in Enquiries, where you can send quotations and chat with them."),
-        h("button",{class:"btn",type:"button",onclick:function(){openTab("enquiries");}},"Open enquiries")])
-    ]));
+    return h("ul",{class:"tips"},list.map(function(t,i){return h("li",{class:t[0]?"done":""},[h("b",null,t[0]?"✓":String(i+1)),h("span",null,t[1])]);}));
+  }
+  function boostCard(){
+    return h("div",{class:"card boost"},[h("span",{class:"pill"},"Coming soon"),h("h2",{style:"margin-top:.6rem"},"Boost your products"),
+      h("p",null,"Featured placement in search results and category pages, so more Brazilian buyers see your products first."),
+      h("a",{class:"btn btn-sm",href:wa("Hello! I am interested in boosting my products on India Brazil. Reference "+sup.reference),target:"_blank",rel:"noopener"},"Register interest")]);
   }
 
-  async function profile(p){
-    var s=sup;
-    p.appendChild(h("div",{class:"grid"},[
-      h("div",{class:"card"},[h("h3",null,"Company"),dl([["Company",s.company_name],["Business type",s.business_type],["City / State",[s.city,s.state].filter(Boolean).join(", ")],["IEC",s.iec],["GSTIN",s.gstin],["Year established",s.year_established],["Website",s.website],["Export turnover",s.export_turnover],["Latin America experience",s.latam_experience]])]),
-      h("div",{class:"card"},[h("h3",null,"Contact"),dl([["Name",[s.contact_salutation,s.contact_name].filter(Boolean).join(" ")],["Designation",s.designation],["Email",s.email],["Mobile",s.mobile+(s.whatsapp?" (WhatsApp)":"")]])]),
-      h("div",{class:"card"},[h("h3",null,"Products"),dl([["Categories",s.categories],["Main products",s.main_products],["Certifications",s.certifications]])])
-    ]));
-    p.appendChild(h("p",{class:"muted"},"Need to change something? Write to us on WhatsApp with your reference "+s.reference+" and our team will update it."));
-  }
+  // ---------- Dashboard ----------
+  async function viewHome(){
+    var d=await dash(30),cat=await catalogueState().catch(function(){return null;});
+    var att=needsAction(),u=totalUnread();
+    var open=S.rfqs.filter(function(r){return sit(r).k!=="done";}).length;
+    var isLive=sup.status==="published";
+    var kp=[
+      kpi(num(S.products.length),"products in showcase",{href:"#/products"}),
+      kpi(num(att.length),"enquiries need your reply",{href:"#/enquiries?f=todo",hot:att.length>0}),
+      kpi(num(u),"unread messages",{href:"#/messages",hot:u>0})
+    ];
+    if(d)kp.push(
+      kpi(num(d.impressions),"times shown to buyers · 30 days",{href:"#/performance",delta:delta(d.impressions,d.prev.impressions),title:"Impressions: how many times your products appeared on screen in listings and search"}),
+      kpi(num(d.views),"product page views · 30 days",{href:"#/performance",delta:delta(d.views,d.prev.views)}),
+      kpi(d.rfqs?pct(d.answered,d.rfqs):"–","response rate · 30 days",{href:"#/performance"}));
+    else kp.push(kpi(num(open),"active enquiries",{href:"#/enquiries"}));
 
-  async function catalogues(p){
-    var cs=await catalogueState(), s=sup;
-    var files=h("ul",{class:"files"});
-    (s.catalogue_files||[]).forEach(function(path){
-      var name=path.split("/").pop();
-      files.appendChild(h("li",null,[h("span",null,name),h("button",{class:"btn btn-sm btn-ghost",type:"button",onclick:async function(){
-        var u=await sb.storage.from(BUCKET).createSignedUrl(path,300,{download:name});
-        if(u.error)return fail(u.error);location.href=u.data.signedUrl;
-      }},"Download")]));
-    });
-    if(s.catalogue_link)files.appendChild(h("li",null,[h("span",null,s.catalogue_link),h("a",{class:"btn btn-sm btn-ghost",href:s.catalogue_link,target:"_blank",rel:"noopener noreferrer"},"Open link")]));
-    if(!files.children.length)files.appendChild(h("li",{class:"muted"},"No catalogue received yet. Send it to us on WhatsApp with your reference "+s.reference+"."));
-
-    var st=cs.summary?["Processed","good"]:cs.job&&(cs.job.status==="queued"||cs.job.status==="processing")?["Being processed","warn"]:["Awaiting review","warn"];
-    var box=h("div",{class:"card"},[h("h3",null,"Processing by our team"),h("p",null,h("span",{class:"pill "+st[1]},st[0]))]);
-    if(cs.summary){
-      var x=cs.summary.summary||{},t=x.totals||{};
-      box.appendChild(h("div",{class:"tiles"},[
-        h("div",{class:"tile"},[h("b",null,String(t.products!=null?t.products:(x.products||[]).length)),h("span",null,"products identified")]),
-        h("div",{class:"tile"},[h("b",null,String(t.variants!=null?t.variants:"–")),h("span",null,"variants")]),
-        h("div",{class:"tile"},[h("b",null,String(t.with_price!=null?t.with_price:"–")),h("span",null,"with price")])
-      ]));
-      if(x.missing_info&&x.missing_info.length){
-        box.appendChild(h("h3",{style:"margin-top:1rem"},"Information we still need from you"));
-        box.appendChild(h("p",{class:"muted"},"Sending these details helps buyers choose you. (Listed in Portuguese by our team; reply on WhatsApp in English.)"));
-        box.appendChild(h("ul",{class:"plain"},x.missing_info.map(function(i){return h("li",null,i);})));
-      }
-    }else{
-      box.appendChild(h("p",{class:"muted"},"Our team reads every catalogue and organises your products for Brazilian buyers. You will see the result here."));
-    }
-    p.appendChild(h("div",{class:"grid"},[h("div",{class:"card"},[h("h3",null,"Catalogues you sent"),files]),box]));
-  }
-
-  // --- Orçamentos (RFQs) ---
-  async function enquiries(p,id){
-    if(id)return enquiry(p,id);
-    var r=await sb.from("rfqs").select("id,code,created_at,product,buyer_label,quantity,unit,status,needed_by").eq("supplier_id",sup.id).order("created_at",{ascending:false});
-    if(r.error)throw r.error;
-    if(!r.data.length){p.appendChild(h("div",{class:"card empty"},[h("p",null,"No enquiries yet."),h("p",{class:"muted"},"When a Brazilian buyer asks about your products, the enquiry will appear here and we will alert you on WhatsApp.")]));return;}
-    p.appendChild(h("div",{class:"card scroll",style:"padding:0"},h("table",{class:"tbl"},[
-      h("thead",null,h("tr",null,["Date","Enquiry","Product","Buyer","Quantity","Status"].map(function(c){return h("th",null,c);}))),
-      h("tbody",null,r.data.map(function(q){
-        var go=function(){openTab("enquiries",q.id);};
-        return h("tr",{class:"row",tabindex:"0",onclick:go,onkeydown:function(e){if(e.key==="Enter")go();}},[
-          h("td",null,date(q.created_at)),h("td",{class:"mono"},q.code),h("td",null,h("b",null,q.product)),h("td",null,q.buyer_label),
-          h("td",null,q.quantity!=null?q.quantity+" "+(q.unit||""):"–"),h("td",null,pill(RFQ,q.status))]);
-      }))
-    ])));
-  }
-
-  async function enquiry(p,id){
-    var r=await sb.from("rfqs").select("*").eq("id",id).maybeSingle();
-    if(r.error)throw r.error;
-    if(!r.data){p.appendChild(h("p",{class:"empty"},"Enquiry not found."));return;}
-    var q=r.data;
-    var qs=await sb.from("rfq_quotes").select("*").eq("rfq_id",q.id).order("created_at",{ascending:false});
-    if(qs.error)throw qs.error;
-
-    p.appendChild(h("button",{class:"btn btn-ghost btn-sm",type:"button",style:"margin-bottom:14px",onclick:function(){openTab("enquiries");}},"← All enquiries"));
-    p.appendChild(h("div",{class:"top"},[h("div",null,[h("div",{class:"muted mono"},q.code),h("h1",{style:"font-size:1.3rem"},q.product)]),pill(RFQ,q.status)]));
-
-    var left=h("div",null,[
-      h("div",{class:"card",style:"margin-bottom:16px"},[h("h3",null,"Request"),dl([
-        ["Request type",q.request_type==="sample"?"Sample request":"Quotation"],["Buyer",q.buyer_label],["Quantity",q.quantity!=null?q.quantity+" "+(q.unit||""):null],
-        ["Target price",q.target_price!=null?q.target_price+" "+(q.currency||""):null],["Incoterm",q.incoterm],
-        ["Destination",q.destination],["Needed by",q.needed_by?date(q.needed_by):null],["Received",date(q.created_at)],
-        ["Source",q.origin==="marketplace"?"India Brasil marketplace":"India Brasil team"]]),
-        q.product_id?h("p",{style:"margin:.6rem 0 0"},h("a",{href:"/marketplace/produto/"+q.product_id,target:"_blank",rel:"noopener"},"See the product on the marketplace")):null,
-        q.details?h("p",{style:"margin:1rem 0 0;white-space:pre-wrap"},q.details):null]),
-      quotesCard(q,qs.data)
+    var list=att.length?att:S.rfqs.slice(0,6);
+    shell("#/",[
+      pageH("Namaste, "+(sup.contact_name||sup.company_name)+"!",sup.company_name+" · "+sup.reference+" · "+(REG[sup.status]||[sup.status])[0],
+        isLive?h("a",{class:"btn btn-ghost btn-sm",href:"/marketplace/fornecedor/"+sup.id,target:"_blank",rel:"noopener"},"View my showcase ↗"):null),
+      isLive?null:journey(cat),
+      !isLive&&!((sup.catalogue_files||[]).length||sup.catalogue_link)?h("div",{class:"note"},["Send us your product catalogue so we can publish your products for Brazilian buyers. ",h("a",{href:wa("Hello! Sending my catalogue. Reference "+sup.reference),target:"_blank",rel:"noopener"},"Send on WhatsApp")]):null,
+      h("div",{class:"kpis"},kp),
+      h("div",{class:"grid2"},[
+        h("div",{class:"stack"},[
+          h("div",{class:"card",style:"padding:0"},[h("div",{class:"card-h",style:"padding:16px 16px 4px"},[h("h2",null,att.length?"Needs your attention":"Recent enquiries"),S.rfqs.length?h("a",{href:"#/enquiries"},"All enquiries →"):null]),
+            list.length?h("div",null,list.map(function(r){return rfqRow(r,{preview:true});}))
+              :h("div",{class:"empty"},[h("div",{class:"big-ico"},"📨"),h("p",null,"No enquiries yet."),h("p",{style:"font-size:.9rem"},isLive?"When a Brazilian buyer asks about your products, the enquiry appears here and we alert you on WhatsApp.":"Enquiries start once your products are live on the marketplace.")])]),
+          d?h("div",{class:"card"},[h("div",{class:"card-h"},[h("h2",null,"Last 30 days"),h("a",{href:"#/performance"},"Full report →")]),dailyChart(d.daily),
+            h("div",{class:"legend"},[h("span",null,[h("i",{style:"background:var(--bar-a)"}),"Times shown"]),h("span",null,[h("i",{style:"background:var(--bar-b)"}),"Product views"]),h("span",null,[h("i",{style:"background:var(--orange);border-radius:50%"}),"Enquiries"])])])
+            :trackingNote()
+        ]),
+        h("div",{class:"stack"},[
+          d?h("div",{class:"card"},[h("h2",null,"Your buyer funnel"),h("p",{class:"hint",style:"margin:-.3rem 0 .9rem"},"From being seen to receiving an enquiry, last 30 days."),funnel(d)]):null,
+          h("div",{class:"card"},[h("h2",null,"Grow your enquiries"),tips(d)]),
+          boostCard()
+        ])
+      ])
     ]);
-    chan=RfqChat.mount({sb:sb,rfq:q,me:"supplier",lang:"en",onError:fail});
-    var right=h("div",{class:"card"},[h("h3",null,"Chat with the buyer"),h("p",{class:"hint",style:"margin:-.3rem 0 .6rem"},"Our team follows this conversation and helps with translation. Use 📎 to send price lists, photos or specifications."),chan.el]);
-    p.appendChild(h("div",{class:"grid"},[left,right]));
+  }
+  function trackingNote(){return h("div",{class:"card"},[h("h2",null,"Showcase statistics"),h("p",{class:"muted",style:"margin:0"},"Visitor statistics are being prepared and will appear here soon.")]);}
+
+  // Gráfico diário (SVG): barras de vezes exibido e visualizações, ponto laranja para pedidos
+  function dailyChart(rows){
+    rows=rows||[];var W=640,H=180,P=24,n=Math.max(rows.length,1),bw=(W-P*2)/n;
+    var max=Math.max(1,Math.max.apply(null,rows.map(function(r){return Math.max(r.impressions,r.views);})));
+    var ns="http://www.w3.org/2000/svg",svg=document.createElementNS(ns,"svg");
+    svg.setAttribute("viewBox","0 0 "+W+" "+(H+22));svg.setAttribute("class","chart");svg.setAttribute("role","img");
+    svg.setAttribute("aria-label","Daily times shown, product views and enquiries");
+    function el(t,a,txt2){var e=document.createElementNS(ns,t);Object.keys(a).forEach(function(k){e.setAttribute(k,a[k]);});if(txt2!=null)e.textContent=txt2;svg.appendChild(e);return e;}
+    el("line",{x1:P,x2:W-P,y1:H,y2:H,stroke:"var(--line)"});
+    el("text",{x:P,y:12,"font-size":"11",fill:"var(--muted)"},num(max));
+    rows.forEach(function(r,i){
+      var x=P+i*bw;
+      var hi=(H-20)*r.impressions/max,hv=(H-20)*r.views/max;
+      var a=el("rect",{x:x+bw*.12,y:H-hi,width:Math.max(1,bw*.76),height:hi,rx:2,fill:"var(--bar-a)"});
+      var b=el("rect",{x:x+bw*.3,y:H-hv,width:Math.max(1,bw*.4),height:hv,rx:2,fill:"var(--bar-b)"});
+      if(r.rfqs)el("circle",{cx:x+bw/2,cy:H-hv-8,r:4.5,fill:"var(--orange)"});
+      var t=new Date(r.d+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short"})+": "+r.impressions+" shown, "+r.views+" views, "+r.rfqs+" enquiries";
+      [a,b].forEach(function(e){var tt=document.createElementNS(ns,"title");tt.textContent=t;e.appendChild(tt);});
+      if(i===0||i===rows.length-1||(rows.length>14&&i===Math.floor(rows.length/2)))
+        el("text",{x:x+bw/2,y:H+16,"font-size":"11",fill:"var(--muted)","text-anchor":i===0?"start":i===rows.length-1?"end":"middle"},new Date(r.d+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short"}));
+    });
+    return svg;
+  }
+  function funnel(d){
+    var st=[["Times shown",d.impressions],["Product views",d.views],["Started a request",d.quote_starts],["Enquiries received",d.rfqs]];
+    var max=Math.max(1,st[0][1],st[1][1]);
+    return h("div",{class:"funnel"},st.map(function(s,i){
+      return [h("div",{class:"st"},[h("span",null,s[0]),h("div",{class:"tr"},h("div",{class:"fl"+(i===3?" o":""),style:"width:"+Math.max(1,Math.round(s[1]*100/max))+"%"})),h("span",{class:"n"},num(s[1]))]),
+        i?h("div",{class:"st"},h("p",{class:"rate"},"↳ "+pct(s[1],st[i-1][1])+" of the previous step")):null];
+    }));
   }
 
-  function quotesCard(q,list){
-    var card=h("div",{class:"card"},h("h3",null,"Your quotations"));
-    if(list.length){
-      card.appendChild(h("div",{class:"scroll"},h("table",{class:"tbl"},[
-        h("thead",null,h("tr",null,["Sent","Unit price","MOQ","Lead time","Incoterm","Valid until"].map(function(c){return h("th",null,c);}))),
-        h("tbody",null,list.map(function(x){return h("tr",null,[h("td",null,date(x.created_at)),h("td",null,h("b",null,x.unit_price+" "+x.currency)),h("td",null,txt(x.moq)),
-          h("td",null,x.lead_time_days!=null?x.lead_time_days+" days":"–"),h("td",null,txt(x.incoterm)),h("td",null,x.valid_until?date(x.valid_until):"–")]);}))
-      ])));
-    }
-    if(["open","quoted","negotiating"].indexOf(q.status)<0){if(!list.length)card.appendChild(h("p",{class:"muted"},"This enquiry is closed."));return card;}
+  // ---------- Enquiries ----------
+  var FILTERS=[["","All"],["todo","Needs reply"],["quoted","Quotation sent"],["neg","In negotiation"],["done","Closed"]];
+  function inFilter(r,f){var k=sit(r).k;return !f||(f==="todo"?k==="new"||k==="reply":k===f);}
+  function viewEnquiries(f){
+    var list=S.rfqs.filter(function(r){return inFilter(r,f);});
+    shell("#/enquiries",[
+      pageH("Enquiries","Requests for quotation and samples from Brazilian buyers."),
+      h("div",{class:"filters"},FILTERS.map(function(x){var n=S.rfqs.filter(function(r){return inFilter(r,x[0]);}).length;
+        return h("a",{href:"#/enquiries"+(x[0]?"?f="+x[0]:""),"aria-current":(f||"")===x[0]?"page":null},[x[1],h("span",null,String(n))]);})),
+      h("div",{class:"card",style:"padding:0"},list.length?list.map(function(r){return rfqRow(r);}):h("div",{class:"empty"},[h("div",{class:"big-ico"},"📨"),h("p",null,f?"No enquiries here.":"No enquiries yet. We alert you on WhatsApp when one arrives.")]))
+    ]);
+  }
+  function viewMessages(){
+    var list=S.rfqs.filter(function(r){return S.inbox[r.id]&&S.inbox[r.id].last_at;}).sort(function(a,b){return new Date(S.inbox[b.id].last_at)-new Date(S.inbox[a.id].last_at);});
+    shell("#/messages",[
+      pageH("Messages","One conversation per enquiry. Write in English: buyers read it in Portuguese. Our team follows every chat."),
+      h("div",{class:"card",style:"padding:0"},list.length?list.map(function(r){return rfqRow(r,{preview:true});}):h("div",{class:"empty"},[h("div",{class:"big-ico"},"💬"),h("p",null,"No conversations yet.")]))
+    ]);
+  }
 
-    function sel(id,opts,val){var s=h("select",{id:id});opts.forEach(function(o){s.appendChild(h("option",{value:o},o));});s.value=val;return s;}
+  // ---------- Espaço do pedido: conversa, cotação e próximo passo ----------
+  async function viewEnquiry(id){
+    var q=await sb.from("rfqs").select("*,products(id,image_path,name,code)").eq("id",id).maybeSingle();
+    if(q.error)throw q.error;
+    if(!q.data){shell("#/enquiries",h("div",{class:"card empty"},[h("p",null,"Enquiry not found."),h("a",{href:"#/enquiries"},"Back to enquiries")]));return;}
+    var r=q.data,pr=one(r.products)||{};
+    var qs=await sb.from("rfq_quotes").select("*").eq("rfq_id",r.id).order("created_at",{ascending:false});
+    if(qs.error)throw qs.error;
+    var mine=await sb.from("rfq_messages").select("id",{count:"exact",head:true}).eq("rfq_id",r.id).eq("sender_role","supplier");
+    var quotes=qs.data,s=sit(r),closed=["won","lost","closed"].indexOf(r.status)>-1,replied=quotes.length>0||(mine.count||0)>0;
+
+    var steps=[["Enquiry received",true],["You replied",replied],["Quotation sent",quotes.length>0],["Negotiation",closed],["Closed",closed]];
+    var nowIdx=steps.findIndex(function(x){return !x[1];});
+    var bar=h("ol",{class:"journey"},steps.map(function(x,i){return h("li",{class:x[1]?"done":i===nowIdx?"now":""},[h("b",null,x[1]?"✓":String(i+1)),x[0]]);}));
+
+    stopChat();
+    chat=RfqChat.mount({sb:sb,rfq:r,me:"supplier",lang:"en",onError:fail,onNew:function(m){if(m.sender_role!=="supplier")markReadSoon(r.id);}});
+    markRead(r.id);
+
+    var nx=closed?["✔️",r.status==="won"?"Order confirmed":"Enquiry closed","The conversation stays available for reference."]
+      :r.status==="negotiating"?["🤝","The buyer accepted your quotation","Agree payment terms, shipping, lead time and documents in the chat. Our team supports you."]
+      :s.k==="reply"?["💬","The buyer sent a message","Reply in the chat. Quick answers win more orders."]
+      :quotes.length?["📨","Quotation sent","Waiting for the buyer. If there is no answer in 3 days, follow up in the chat or send an updated quotation."]
+      :["⏳","Send your quotation","Fast replies win more orders: aim for 24 hours. Ask in the chat if you need more details."];
+    var next=h("div",{class:"card next"},[h("h3",null,[h("span",null,nx[0]),nx[1]]),h("p",{style:"margin:0"},nx[2])]);
+    var req=h("div",{class:"card"},[h("h2",null,"Buyer's request"),
+      pr.id?h("a",{class:"row",style:"padding:0 0 12px;border:0",href:"/marketplace/produto/"+pr.id,target:"_blank",rel:"noopener"},[thumb(pr.image_path),h("div",{class:"tx"},[h("div",{class:"nm"},pr.name||r.product),h("div",{class:"mt"},"See it on the marketplace ↗")])]):null,
+      dl([["Request type",r.request_type==="sample"?"Sample request":"Quotation"],["Buyer",r.buyer_label],["Quantity",r.quantity!=null?num(r.quantity)+" "+(r.unit||""):null],
+        ["Target price",r.target_price!=null?money(r.target_price,r.currency):null],["Incoterm",r.incoterm],["Destination",r.destination],
+        ["Needed by",r.needed_by?date(r.needed_by):null],["Received",date(r.created_at)],["Source",r.origin==="marketplace"?"India Brazil marketplace":"India Brazil team"]]),
+      r.details?h("p",{style:"margin:.8rem 0 0;white-space:pre-wrap;font-size:.92rem"},r.details):null]);
+
+    shell("#/enquiries",[
+      h("a",{href:"#/enquiries",style:"display:inline-block;margin-bottom:10px;font-size:.9rem"},"← All enquiries"),
+      h("div",{class:"ws-head"},[h("div",null,[h("span",{class:"mono muted"},r.code),h("h1",null,r.product),h("span",{class:"muted",style:"font-size:.9rem"},r.buyer_label+" · received "+date(r.created_at))]),h("span",{class:"pill "+s.c,style:"font-size:.85rem"},s.t)]),
+      bar,
+      h("div",{class:"ws"},[
+        h("div",{class:"card"},[h("h2",{style:"display:flex;justify-content:space-between;gap:.5rem;flex-wrap:wrap"},["Chat with the buyer",h("span",{class:"muted",style:"font-size:.82rem;font-weight:500"},"India Brazil team following")]),chat.el]),
+        h("div",{class:"stack"},[next,quotesCard(r,quotes,closed),req])
+      ])
+    ]);
+  }
+  var readT=null;function markReadSoon(id){clearTimeout(readT);readT=setTimeout(function(){markRead(id);},800);}
+  function stopChat(){if(chat){chat.stop();chat=null;}}
+
+  function quotesCard(r,list,closed){
+    var card=h("div",{class:"card"},h("h2",null,"Your quotations ("+list.length+")"));
+    list.forEach(function(x){
+      card.appendChild(h("div",{class:"quote"},[h("div",{class:"pr"},money(x.unit_price,x.currency)+(r.unit?" / "+r.unit:"")),
+        dl([["MOQ",x.moq],["Lead time",x.lead_time_days!=null?x.lead_time_days+" days":null],["Incoterm",x.incoterm],["Valid until",x.valid_until?date(x.valid_until):null],["Sent",date(x.created_at)],["Notes",x.notes]])]));
+    });
+    if(closed||r.status==="negotiating"){if(!list.length)card.appendChild(h("p",{class:"muted",style:"margin:0"},closed?"This enquiry is closed.":"Agree the details in the chat."));return card;}
     var f=h("form",{class:"form2",style:"margin-top:1rem"},[
       h("div",{class:"field"},[h("label",{for:"qPrice"},"Unit price *"),h("input",{id:"qPrice",type:"number",min:"0.0001",step:"any",required:true,inputmode:"decimal"})]),
-      h("div",{class:"field"},[h("label",{for:"qCur"},"Currency"),sel("qCur",CUR,q.currency&&CUR.indexOf(q.currency)>-1?q.currency:"USD")]),
+      h("div",{class:"field"},[h("label",{for:"qCur"},"Currency"),sel("qCur",CUR,r.currency&&CUR.indexOf(r.currency)>-1?r.currency:"USD")]),
       h("div",{class:"field"},[h("label",{for:"qMoq"},"Minimum order (MOQ)"),h("input",{id:"qMoq",placeholder:"e.g. 500 pcs"})]),
       h("div",{class:"field"},[h("label",{for:"qLead"},"Lead time (days)"),h("input",{id:"qLead",type:"number",min:"0",max:"730",inputmode:"numeric"})]),
-      h("div",{class:"field"},[h("label",{for:"qInco"},"Incoterm"),sel("qInco",INCO,q.incoterm&&INCO.indexOf(q.incoterm)>-1?q.incoterm:"FOB")]),
+      h("div",{class:"field"},[h("label",{for:"qInco"},"Incoterm"),sel("qInco",INCO,r.incoterm&&INCO.indexOf(r.incoterm)>-1?r.incoterm:"FOB")]),
       h("div",{class:"field"},[h("label",{for:"qValid"},"Valid until"),h("input",{id:"qValid",type:"date"})]),
       h("div",{class:"field full"},[h("label",{for:"qNotes"},"Notes"),h("textarea",{id:"qNotes",maxlength:"4000",placeholder:"Payment terms, packaging, samples, certifications…"})]),
       h("div",{class:"full"},[h("button",{class:"btn",type:"submit"},list.length?"Send updated quotation":"Send quotation"),h("p",{class:"err",role:"alert"})])
@@ -517,23 +843,144 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
     f.addEventListener("submit",async function(ev){
       ev.preventDefault();busy(f,true);f.querySelector(".err").textContent="";
       var v=function(id){return f.querySelector("#"+id).value.trim();};
-      var r=await sb.from("rfq_quotes").insert({rfq_id:q.id,supplier_id:sup.id,unit_price:+v("qPrice"),currency:v("qCur"),moq:v("qMoq")||null,
+      var x=await sb.from("rfq_quotes").insert({rfq_id:r.id,supplier_id:sup.id,unit_price:+v("qPrice"),currency:v("qCur"),moq:v("qMoq")||null,
         lead_time_days:v("qLead")?parseInt(v("qLead"),10):null,incoterm:v("qInco"),valid_until:v("qValid")||null,notes:v("qNotes")||null});
       busy(f,false);
-      if(r.error){f.querySelector(".err").textContent="Could not send the quotation: "+r.error.message;return;}
-      countOpen();openTab("enquiries",q.id);
+      if(x.error){f.querySelector(".err").textContent="Could not send the quotation: "+x.error.message;return;}
+      toast("Quotation sent. The buyer has been notified in the chat.");
+      dashCache={};await loadData();viewEnquiry(r.id).catch(fail);
     });
-    card.appendChild(h("h3",{style:"margin-top:1.2rem"},list.length?"Send an updated quotation":"Send your quotation"));
-    card.appendChild(f);
+    var wrap=h("details",{open:list.length?null:true,style:"margin-top:.6rem"},[h("summary",{style:"cursor:pointer;font-weight:700"},list.length?"Send an updated quotation":"Send your quotation"),f]);
+    card.appendChild(wrap);
     return card;
   }
 
-  // Chat do pedido (componente compartilhado em /assets/js/rfq-chat.js, com anexos)
-  function stopChat(){if(chan){chan.stop();chan=null;}}
+  // ---------- Desempenho ----------
+  async function viewPerformance(days){
+    days=[7,30,90].indexOf(days)>-1?days:30;
+    var d=await dash(days);
+    var seg=h("div",{class:"seg",role:"group","aria-label":"Period"},[7,30,90].map(function(n){return h("a",{href:"#/performance?d="+n,"aria-current":n===days?"page":null},n+" days");}));
+    if(!d){shell("#/performance",[pageH("Performance","How Brazilian buyers find and engage with your products.",seg),trackingNote()]);return;}
+    var ctr=pct(d.views,d.impressions),conv=pct(d.rfqs,d.views);
+    var srcs=Object.keys(d.sources||{}).map(function(k){return [k,d.sources[k]];}).sort(function(a,b){return b[1]-a[1];});
+    var SRCN={direct:"Direct",search:"Google & search",social:"Social media",referral:"Other websites",campaign:"Campaigns"};
+    var srcTot=srcs.reduce(function(n,s){return n+s[1];},0);
+    shell("#/performance",[
+      pageH("Performance","How Brazilian buyers find and engage with your products.",seg),
+      h("div",{class:"kpis"},[
+        kpi(num(d.impressions),"times shown",{delta:delta(d.impressions,d.prev.impressions),title:"How many times your products appeared on screen in listings and search"}),
+        kpi(num(d.views),"product page views",{delta:delta(d.views,d.prev.views)}),
+        kpi(num(d.visitors),"unique visitors"),
+        kpi(ctr,"click rate",{title:"Product views ÷ times shown"}),
+        kpi(num(d.rfqs),"enquiries",{delta:delta(d.rfqs,d.prev.rfqs),href:"#/enquiries"}),
+        kpi(conv,"enquiry rate",{title:"Enquiries ÷ product views"})
+      ]),
+      h("div",{class:"grid2"},[
+        h("div",{class:"stack"},[
+          h("div",{class:"card"},[h("h2",null,"Day by day"),dailyChart(d.daily),
+            h("div",{class:"legend"},[h("span",null,[h("i",{style:"background:var(--bar-a)"}),"Times shown"]),h("span",null,[h("i",{style:"background:var(--bar-b)"}),"Product views"]),h("span",null,[h("i",{style:"background:var(--orange);border-radius:50%"}),"Enquiries"])])]),
+          h("div",{class:"card",style:"padding:0"},[h("div",{style:"padding:16px 16px 0"},[h("h2",null,"Products"),h("p",{class:"hint",style:"margin:-.3rem 0 .6rem"},"Products with many views but few enquiries usually need a price, photos or a clearer description.")]),
+            h("div",{class:"scroll"},h("table",{class:"tbl"},[
+              h("thead",null,h("tr",null,[h("th",null,"Product"),h("th",{class:"n"},"Shown"),h("th",{class:"n"},"Views"),h("th",{class:"n"},"Click rate"),h("th",{class:"n"},"Requests started"),h("th",{class:"n"},"Enquiries")])),
+              h("tbody",null,(d.products||[]).length?d.products.map(function(p){return h("tr",null,[
+                h("td",null,h("a",{class:"pn",href:"/marketplace/produto/"+p.id,target:"_blank",rel:"noopener",style:"color:var(--ink);text-decoration:none"},[thumb(p.image_path),h("span",null,p.name)])),
+                h("td",{class:"n"},num(p.impressions)),h("td",{class:"n"},num(p.views)),h("td",{class:"n"},pct(p.views,p.impressions)),h("td",{class:"n"},num(p.quote_starts)),h("td",{class:"n"},h("b",null,num(p.rfqs)))]);})
+                :h("tr",null,h("td",{colspan:"6",class:"muted"},"No products live yet."))
+              )]))])
+        ]),
+        h("div",{class:"stack"},[
+          h("div",{class:"card"},[h("h2",null,"Buyer funnel"),funnel(d)]),
+          h("div",{class:"card"},[h("h2",null,"Engagement"),dl([["Showcase visits",num(d.storefront_views)],["Added to quote list",num(d.list_adds)],["Quotations you sent",num(d.quotes_sent)],
+            ["Response rate",d.rfqs?pct(d.answered,d.rfqs):"–"],["Average first reply",d.avg_response_hours!=null?(d.avg_response_hours<1?"under 1 hour":d.avg_response_hours+" hours"):"–"],["New enquiries waiting",num(d.open_rfqs)]])]),
+          h("div",{class:"card"},[h("h2",null,"Where buyers come from"),srcs.length?srcs.map(function(s){return h("div",{class:"src"},[h("span",null,SRCN[s[0]]||s[0]),h("div",{class:"tr"},h("div",{class:"fl",style:"width:"+Math.round(s[1]*100/srcTot)+"%"})),h("span",{class:"muted",style:"text-align:right"},pct(s[1],srcTot))]);})
+            :h("p",{class:"muted",style:"margin:0"},"No visits in this period yet.")]),
+          boostCard()
+        ])
+      ])
+    ]);
+  }
 
-  // --- Segurança ---
-  async function security(p){
-    var fs=(await sb.auth.mfa.listFactors()).data;
+  // ---------- Produtos na vitrine ----------
+  async function viewProducts(){
+    var d=await dash(30),st={};
+    ((d&&d.products)||[]).forEach(function(p){st[p.id]=p;});
+    var avg=S.products.length?Math.round(S.products.reduce(function(n,p){return n+quality(p).score;},0)/S.products.length):0;
+    shell("#/products",[
+      pageH("Products in showcase",S.products.length+" product"+(S.products.length===1?"":"s")+" live on the India Brazil marketplace. Figures for the last 30 days.",
+        sup.status==="published"?h("a",{class:"btn btn-ghost btn-sm",href:"/marketplace/fornecedor/"+sup.id,target:"_blank",rel:"noopener"},"View my showcase ↗"):null),
+      S.products.length?h("div",{class:"card",style:"margin-bottom:16px"},[h("div",{class:"card-h"},[h("h2",null,"Listing quality: "+avg+"%"),h("a",{href:wa("Hello! I want to update my product details. Reference "+sup.reference),target:"_blank",rel:"noopener"},"Send updates on WhatsApp")]),
+        h("div",{class:"meter"+(avg<75?" mid":"")},h("i",{style:"width:"+avg+"%"})),
+        h("p",{class:"hint"},"Complete listings (photo, reference price, minimum order and a clear description) receive more enquiries. Send missing details to our team and we update them for you.")]):null,
+      S.products.length?h("div",{class:"pgrid"},S.products.map(function(p){
+        var q=quality(p),x=st[p.id]||{};
+        var price=p.price_min!=null||p.price_max!=null?money(p.price_min!=null?p.price_min:p.price_max,p.currency)+(p.price_unit?" / "+p.price_unit:""):null;
+        return h("div",{class:"pc"},[
+          h("a",{class:"ph",href:"/marketplace/produto/"+p.id,target:"_blank",rel:"noopener"},p.image_path?h("img",{src:IMG+p.image_path,alt:p.name,loading:"lazy"}):"📦"),
+          h("div",{class:"bd"},[h("div",{class:"nm"},p.name),h("div",{class:"muted",style:"font-size:.84rem"},[p.category||"",price?" · "+price:" · no price"]),
+            q.miss.length?h("div",{style:"font-size:.8rem;color:#B45F00"},"Missing: "+q.miss.join(", ")):h("div",{style:"font-size:.8rem;color:var(--green)"},"✓ Complete listing"),
+            h("div",{class:"st3"},[h("div",null,[h("b",null,num(x.impressions||0)),"shown"]),h("div",null,[h("b",null,num(x.views||0)),"views"]),h("div",null,[h("b",null,num(x.rfqs||0)),"enquiries"])])])
+        ]);
+      })):h("div",{class:"card empty"},[h("div",{class:"big-ico"},"📦"),h("p",null,"No products live yet."),h("p",{style:"font-size:.9rem"},"Once our team processes and verifies your catalogue, your products appear here and on the marketplace."),h("a",{class:"btn",href:"#/catalogues"},"See catalogue status")])
+    ]);
+  }
+
+  // ---------- Catálogos ----------
+  async function viewCatalogues(){
+    var cs=await catalogueState(),s=sup;
+    var files=h("ul",{class:"files"});
+    (s.catalogue_files||[]).forEach(function(path){
+      var name=path.split("/").pop();
+      files.appendChild(h("li",null,[h("span",null,"📄 "+name),h("button",{class:"btn btn-sm btn-ghost",type:"button",onclick:async function(){
+        var u=await sb.storage.from(BUCKET).createSignedUrl(path,300,{download:name});
+        if(u.error)return fail(u.error);location.href=u.data.signedUrl;
+      }},"Download")]));
+    });
+    if(s.catalogue_link)files.appendChild(h("li",null,[h("span",null,"🔗 "+s.catalogue_link),h("a",{class:"btn btn-sm btn-ghost",href:s.catalogue_link,target:"_blank",rel:"noopener noreferrer"},"Open link")]));
+    if(!files.children.length)files.appendChild(h("li",{class:"muted"},"No catalogue received yet."));
+
+    var st=cs.summary?["Processed","good"]:cs.job&&(cs.job.status==="queued"||cs.job.status==="processing")?["Being processed","warn"]:["Awaiting review","warn"];
+    var box=h("div",{class:"card"},[h("div",{class:"card-h"},[h("h2",null,"Processing by our team"),h("span",{class:"pill "+st[1]},st[0])])]);
+    if(cs.summary){
+      var x=cs.summary.summary||{},t=x.totals||{};
+      box.appendChild(h("div",{class:"kpis",style:"margin:10px 0 0"},[
+        kpi(String(t.products!=null?t.products:(x.products||[]).length),"products identified"),kpi(String(t.variants!=null?t.variants:"–"),"variants"),kpi(String(t.with_price!=null?t.with_price:"–"),"with price")]));
+      if(x.missing_info&&x.missing_info.length){
+        box.appendChild(h("h3",{style:"margin-top:1rem"},"Information we still need from you"));
+        box.appendChild(h("p",{class:"hint",style:"margin-bottom:.4rem"},"Sending these details helps buyers choose you. (Listed in Portuguese by our team; reply on WhatsApp in English.)"));
+        box.appendChild(h("ul",{style:"margin:0;padding-left:1.1rem"},x.missing_info.map(function(i){return h("li",null,i);})));
+      }
+    }else box.appendChild(h("p",{class:"muted",style:"margin:0"},"Our team reads every catalogue and organises your products for Brazilian buyers. You will see the result here."));
+    shell("#/catalogues",[
+      pageH("Catalogues","The files you sent us and how our team is preparing them for the marketplace.",
+        h("a",{class:"btn btn-sm",href:wa("Hello! I want to send a new catalogue. Reference "+s.reference),target:"_blank",rel:"noopener"},"Send a new catalogue")),
+      h("div",{class:"grid2"},[h("div",{class:"card"},[h("h2",null,"Catalogues you sent"),files]),box])
+    ]);
+  }
+
+  // ---------- Empresa ----------
+  function viewProfile(){
+    var s=sup;
+    var fields=[s.company_name,s.business_type,s.city,s.state,s.iec,s.gstin,s.year_established,s.website,s.export_turnover,s.contact_name,s.designation,s.mobile,(s.categories||[]).length,(s.main_products||"").length,(s.certifications||[]).length];
+    var done=fields.filter(function(v){return v!=null&&v!==""&&v!==0;}).length,score=Math.round(done*100/fields.length);
+    shell("#/profile",[
+      pageH("Company profile","What Brazilian buyers and our team know about your company.",
+        h("a",{class:"btn btn-ghost btn-sm",href:wa("Hello! I want to update my company profile. Reference "+s.reference),target:"_blank",rel:"noopener"},"Request a change")),
+      h("div",{class:"card",style:"margin-bottom:16px"},[h("div",{class:"card-h"},[h("h2",null,"Profile completeness: "+score+"%"),h("span",{class:"pill "+(REG[s.status]||["",""])[1]},(REG[s.status]||[s.status])[0])]),
+        h("div",{class:"meter"+(score<80?" mid":"")},h("i",{style:"width:"+score+"%"})),
+        h("p",{class:"hint"},"Buyers trust complete profiles: certifications, year established and export experience help you win enquiries. On the marketplace your company appears as “Supplier "+s.reference+"”; contact details are never shown to buyers.")]),
+      h("div",{class:"grid2"},[
+        h("div",{class:"card"},[h("h2",null,"Company"),dl([["Company",s.company_name],["Business type",s.business_type],["City / State",[s.city,s.state].filter(Boolean).join(", ")],["IEC",s.iec],["GSTIN",s.gstin],["Year established",s.year_established],["Website",s.website],["Export turnover",s.export_turnover],["Latin America experience",s.latam_experience]])]),
+        h("div",{class:"stack"},[
+          h("div",{class:"card"},[h("h2",null,"Contact"),dl([["Name",[s.contact_salutation,s.contact_name].filter(Boolean).join(" ")],["Designation",s.designation],["Email",s.email],["Mobile",(s.mobile||"")+(s.whatsapp?" (WhatsApp)":"")]])]),
+          h("div",{class:"card"},[h("h2",null,"Products"),dl([["Categories",s.categories],["Main products",s.main_products],["Certifications",s.certifications]])])
+        ])
+      ])
+    ]);
+  }
+
+  // ---------- Segurança ----------
+  async function viewSecurity(){
+    var fs=(await sb.auth.mfa.listFactors()).data||{totp:[]};
     var f=h("form",null,[
       h("div",{class:"field"},[h("label",{for:"cpPass"},"New password"),h("input",{id:"cpPass",type:"password",autocomplete:"new-password",minlength:"10",required:true}),h("p",{class:"hint"},"At least 10 characters.")]),
       h("div",{class:"field"},[h("label",{for:"cpPass2"},"Confirm new password"),h("input",{id:"cpPass2",type:"password",autocomplete:"new-password",required:true})]),
@@ -548,14 +995,36 @@ ul.plain{margin:.3rem 0 0;padding-left:1.1rem}
       if(r.error)return msg(f,r.error.message);
       f.reset();msg(f,"","Password changed.");
     });
-    p.appendChild(h("div",{class:"grid"},[
-      h("div",{class:"card"},[h("h3",null,"Sign-in details"),dl([["Email",me.email],["Two-step verification",REQUIRE_2FA?h("span",{class:"pill good"},"On"):h("span",{class:"pill"},"Off")]].concat(REQUIRE_2FA?[["Authenticator added",fs.totp[0]?date(fs.totp[0].created_at):"–"]]:[])),
-        REQUIRE_2FA?h("p",{class:"hint",style:"margin-top:1rem"},"Changed phones? Contact us on WhatsApp and we will reset your two-step verification after confirming your identity."):null]),
-      h("div",{class:"card"},[h("h3",null,"Change password"),f])
-    ]));
+    shell("#/security",[
+      pageH("Login & security","Your sign-in details."),
+      h("div",{class:"grid2"},[
+        h("div",{class:"card"},[h("h2",null,"Sign-in details"),dl([["Email",me.email],["Last sign-in",me.last_sign_in_at?date(me.last_sign_in_at):null],["Two-step verification",REQUIRE_2FA?h("span",{class:"pill good"},"On"):h("span",{class:"pill"},"Off")]].concat(REQUIRE_2FA?[["Authenticator added",fs.totp[0]?date(fs.totp[0].created_at):"–"]]:[])),
+          REQUIRE_2FA?h("p",{class:"hint",style:"margin-top:1rem"},"Changed phones? Contact us on WhatsApp and we will reset your two-step verification after confirming your identity."):null]),
+        h("div",{class:"card"},[h("h2",null,"Change password"),f])
+      ])
+    ]);
   }
 
-  route().catch(fail);
+  // ---------- rotas ----------
+  async function route(quiet){
+    if(!sup||!me)return;
+    var x=location.hash||"#/",m,qs=new URLSearchParams(x.split("?")[1]||"");
+    if(quiet&&/^#\/enquiry\//.test(x))return;
+    stopChat();
+    try{
+      if((m=x.match(/^#\/enquiry\/([\w-]+)/)))return await viewEnquiry(m[1]);
+      if(/^#\/enquiries/.test(x))return viewEnquiries(qs.get("f")||"");
+      if(x==="#/messages")return viewMessages();
+      if(/^#\/performance/.test(x))return await viewPerformance(+qs.get("d")||30);
+      if(x==="#/products")return await viewProducts();
+      if(x==="#/catalogues")return await viewCatalogues();
+      if(x==="#/profile")return viewProfile();
+      if(x==="#/security")return await viewSecurity();
+      return await viewHome();
+    }catch(e){fail(e);}
+  }
+  window.addEventListener("hashchange",function(){$("accMenu").hidden=true;route();});
+  start().catch(fail);
 })();
 </script>
 </body>
