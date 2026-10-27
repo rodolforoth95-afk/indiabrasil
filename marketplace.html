@@ -74,6 +74,20 @@ header{background:var(--navy);color:#fff;position:sticky;top:0;z-index:20;box-sh
 .links a b{font-size:.92rem;color:#fff}
 .links a:hover b{text-decoration:underline}
 .links .cnt{background:var(--orange);color:#0F1A3D;border-radius:99px;padding:0 .4rem;font-size:.72rem;font-weight:800;margin-left:.2rem}
+.acc{position:relative}
+.acc-btn{display:flex;align-items:center;gap:.55rem;background:none;border:0;color:#fff;font:inherit;cursor:pointer;padding:.25rem .35rem;border-radius:10px;text-align:left}
+.acc-btn:hover{background:rgba(255,255,255,.08)}
+.acc-btn .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#FF9100,#FFB347);color:#0F1A3D;display:grid;place-items:center;font-weight:800;font-size:.88rem;position:relative}
+.acc-btn .avatar .cnt{position:absolute;top:-5px;right:-7px;margin:0;box-shadow:0 0 0 2px var(--navy)}
+.acc-btn small{display:block;color:#C9D0E6;font-size:.74rem;line-height:1.1}
+.acc-btn b{display:block;font-size:.92rem;line-height:1.2;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acc-menu{position:absolute;right:0;top:calc(100% + 8px);width:240px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 40px rgba(0,0,0,.25);padding:.4rem;z-index:40;white-space:normal}
+.acc-menu .who{padding:.55rem .7rem .7rem;border-bottom:1px solid var(--line);margin-bottom:.3rem}
+.acc-menu .who b{display:block;color:var(--ink)}
+.acc-menu .who span{font-size:.8rem;color:var(--muted);overflow-wrap:anywhere}
+.links .acc-menu a,.acc-menu button{display:flex;flex-direction:row;justify-content:space-between;align-items:center;width:100%;padding:.55rem .7rem;border-radius:8px;color:var(--ink);text-decoration:none;background:none;border:0;font:inherit;font-size:.92rem;cursor:pointer;text-align:left}
+.acc-menu a:hover,.acc-menu button:hover{background:var(--chip)}
+@media (max-width:820px){.acc-txt{display:none}}
 .nav{background:var(--navy-2)}
 .nav .wrap{display:flex;gap:4px;overflow-x:auto;padding-top:6px;padding-bottom:6px}
 .nav a{color:#D7DCEC;text-decoration:none;white-space:nowrap;font-size:.88rem;padding:.3rem .7rem;border-radius:99px}
@@ -271,7 +285,10 @@ footer p{margin:.4rem 0 0}
   <div class="wrap bar">
     <a href="/marketplace" aria-label="India Brasil – início do marketplace"><img src="/assets/logo/india-brazil-logo-white.svg" alt="India Brasil"></a>
     <form class="search" id="topSearch" role="search"><input id="q" type="search" placeholder="Busque produtos, ex.: cominho, lençol de algodão, bomba d’água" aria-label="Buscar produtos" autocomplete="off"><button type="submit">Buscar</button></form>
-    <nav class="links"><a href="/comprador#/lista"><b>Lista<span class="cnt" id="listCount">0</span></b>de cotação</a><a href="/comprador"><b>Entrar</b>minha conta</a><a class="hide-sm" href="/comprador#/pedido-livre"><b>Cotação</b>sob medida</a></nav>
+    <nav class="links"><a href="/comprador#/lista"><b>Lista<span class="cnt" id="listCount">0</span></b>de cotação</a><a class="hide-sm" href="/comprador#/pedido-livre"><b>Cotação</b>sob medida</a>
+      <span id="accAnon"><a href="/comprador#/entrar"><b>Entrar</b>ou criar conta</a></span>
+      <div class="acc" id="acc" hidden><button type="button" class="acc-btn" id="accBtn" aria-haspopup="menu" aria-expanded="false"><span class="avatar" id="accAv"></span><span class="acc-txt"><small>Olá,</small><b id="accName"></b></span></button><div class="acc-menu" id="accMenu" role="menu" hidden></div></div>
+    </nav>
   </div>
   <div class="nav"><div class="wrap" id="catBar"><a href="/marketplace/busca">Todas as categorias</a><a class="rfq" href="/comprador#/pedido-livre">Não achou? Peça uma cotação →</a></div></div>
 </header>
@@ -293,7 +310,8 @@ footer p{margin:.4rem 0 0}
   var IMG=SUPABASE_URL+"/storage/v1/object/public/product-images/";
   var SITE="https://www.indiabrasil.com.br", BASE="/marketplace";
   var COLS="id,name,category,image_path,price_min,price_max,currency,price_unit,moq,variant_count,supplier_id,reference,code,created_at,specs";
-  var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false}});
+  // Mesma sessão da área do comprador (/comprador): se a pessoa entrou lá, o topo mostra "Olá, …"
+  var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{storageKey:"ib-buyer-auth"}});
   var $=function(id){return document.getElementById(id);};
   var cats=null, supCache={};
 
@@ -704,6 +722,26 @@ footer p{margin:.4rem 0 0}
     }catch(e){fail(e);}
     window.scrollTo(0,0);
   }
+  // --- Conta no topo: "Olá, Ana" com novidades, ou "Entrar" ---
+  async function account(){
+    var s=(await sb.auth.getSession()).data.session;
+    if(!s)return;
+    var b=await sb.from("buyers").select("contact_name,company_name").eq("user_id",s.user.id).maybeSingle();
+    var ib=await sb.rpc("buyer_inbox");
+    var n=(b.data&&b.data.contact_name)||s.user.email,u=(ib.data||[]).reduce(function(t,x){return t+(+x.unread||0)+(+x.new_quotes||0);},0);
+    var ini=n.trim().split(/\s+/);ini=((ini[0]||"?")[0]+(ini.length>1?ini[ini.length-1][0]:"")).toUpperCase();
+    $("accAnon").hidden=true;$("acc").hidden=false;
+    $("accName").textContent=n.trim().split(/\s+/)[0];
+    var av=$("accAv");av.textContent=ini;if(u)av.appendChild(h("span",{class:"cnt"},String(u)));
+    var m=$("accMenu");
+    m.appendChild(h("div",{class:"who"},[h("b",null,n),h("span",null,(b.data&&b.data.company_name?b.data.company_name+" · ":"")+s.user.email)]));
+    [["/comprador#/","Painel"],["/comprador#/pedidos","Pedidos de cotação"],["/comprador#/mensagens","Mensagens",u],["/comprador#/sob-medida","Pedidos sob medida"],["/comprador#/dados","Dados da empresa"],["/comprador#/conta","Login e segurança"]]
+      .forEach(function(x){m.appendChild(h("a",{href:x[0],role:"menuitem"},[x[1],x[2]?h("span",{class:"cnt"},String(x[2])):null]));});
+    m.appendChild(h("button",{type:"button",role:"menuitem",onclick:async function(){await sb.auth.signOut();location.reload();}},"Sair"));
+    $("accBtn").addEventListener("click",function(){m.hidden=!m.hidden;$("accBtn").setAttribute("aria-expanded",!m.hidden);});
+    document.addEventListener("mousedown",function(e){if(!$("acc").contains(e.target))m.hidden=true;});
+  }
+  account().catch(function(){});
   setList(getList());
   categories().catch(function(){});
   route();

@@ -12,7 +12,11 @@ pedidos de orçamento (RFQs) de compradores brasileiros.
 - admin-orcamentos.html – time cria RFQs, vê cotações e conversa no chat (/admin-orcamentos, mesmo login do /admin)
 - marketplace.html – vitrine pública B2B (/marketplace, português; endereços reais /marketplace/produto/<id>/<nome>, ver rewrite no vercel.json): busca, categorias, produto com cotação rápida, lista de cotação, vitrine do fornecedor
   (o comprador vê "Fornecedor IB-XXXX", nunca nome/contato: o meio de campo é da India Brasil)
-- comprador.html – área do comprador (/comprador): conta, perfil, pedido (orçamento ou amostra, retoma o rascunho do marketplace), lista de cotação, pedido livre e conversas
+- comprador.html – "Minha conta" do comprador (/comprador): criar conta (nome, empresa, WhatsApp, e-mail, senha) → confirmar e-mail
+  → completar empresa → painel (novidades, pedidos por situação, mensagens, sob medida, lista, dados, login e segurança).
+  Cada pedido tem um espaço com linha do tempo, chat, cotações (aceitar e negociar / pedir ajuste) e próximo passo.
+  O marketplace lê a mesma sessão (storageKey ib-buyer-auth) para mostrar "Olá, …" no topo.
+- docs/buyer-account.sql – `rfq_reads` (lido/não lido), `buyer_inbox()`, `buyer_set_rfq_status()`, `buyers.job_title`
 - docs/marketplace-benchmark.md – referências B2B (Alibaba, IndiaMART…), o que adotamos e próximas fases
 - sitemap.xml / robots.txt – gerar de novo com `python3 tools/catalogues.py sitemap` sempre que publicar produtos
 - assets/js/rfq-chat.js – conversa B2B compartilhada (portal, comprador, admin-orcamentos): tempo real + anexos

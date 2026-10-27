@@ -4,8 +4,9 @@
   Mensagens em tempo real (Supabase Realtime) e anexos no bucket privado rfq-files.
 
   var chat = RfqChat.mount({sb, rfq, me: "supplier"|"buyer"|"team", lang: "en"|"pt",
-                            pickRole: false, onError: fn});
-  container.appendChild(chat.el);  ...  chat.stop();
+                            pickRole: false, onError: fn, onNew: fn(msg)});
+  container.appendChild(chat.el);  ...  chat.write("texto"); chat.stop();
+  onNew é chamado para cada mensagem mostrada (histórico e novas), por exemplo para marcar como lida.
 */
 (function(){
   var MAX = 15 * 1024 * 1024;
@@ -86,6 +87,7 @@
           "📄 " + (m.attachment_name || t.file) + (m.attachment_size ? " (" + size(m.attachment_size) + ")" : ""))) : null
       ]));
       list.scrollTop = list.scrollHeight;
+      if (o.onNew) o.onNew(m);
     }
     async function download(m){
       var r = await sb.storage.from("rfq-files").createSignedUrl(m.attachment_path, 300, {download: m.attachment_name || true});
@@ -133,7 +135,9 @@
       .on("postgres_changes", {event:"INSERT", schema:"public", table:"rfq_messages", filter:"rfq_id=eq." + rfq.id}, function(p){ add(p.new); })
       .subscribe();
 
-    return {el: el, stop: function(){ sb.removeChannel(chan); }};
+    return {el: el, stop: function(){ sb.removeChannel(chan); },
+      // Coloca um texto pronto na caixa de mensagem (ex.: "Pedir ajuste na cotação")
+      write: function(text){ ta.value = text; ta.focus(); ta.setSelectionRange(text.length, text.length); }};
   }
 
   window.RfqChat = {mount: mount};

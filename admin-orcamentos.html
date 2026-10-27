@@ -256,7 +256,7 @@ dd{margin:0;overflow-wrap:anywhere}
           q.details?h("p",{style:"margin:1rem 0 0;white-space:pre-wrap"},q.details):null]),
         h("div",{class:"grid",style:"margin-bottom:16px"},[
           h("div",{class:"card"},[h("h3",null,"Fornecedor"),dl([["Empresa",h("a",{href:"/admin#/"+s.reference},s.company_name)],["Contato",s.contact_name],["E-mail",s.email],["Celular",s.mobile]])]),
-          h("div",{class:"card"},[h("h3",null,"Comprador (interno)"),dl([["Empresa",b.company_name],["CNPJ",b.cnpj],["Contato",b.contact_name],["E-mail",b.email],["Telefone",b.phone],["Cidade",[b.city,b.state].filter(Boolean).join("/")],["Segmento",b.segment]])])
+          h("div",{class:"card"},[h("h3",null,"Comprador (interno)"),dl([["Empresa",b.company_name],["CNPJ",b.cnpj],["Contato",b.contact_name],["Cargo",b.job_title],["E-mail",b.email],["Telefone",b.phone],["Cidade",[b.city,b.state].filter(Boolean).join("/")],["Segmento",b.segment]])])
         ]),
         quotes
       ]),
@@ -294,7 +294,7 @@ dd{margin:0;overflow-wrap:anywhere}
     d.appendChild(h("div",{class:"grid"},[
       h("div",{class:"card"},[h("h3",null,"O que o comprador pediu"),dl([["Quantidade",x.quantity!=null?x.quantity+" "+(x.unit||""):null],["Preço-alvo",x.target_price!=null?x.target_price+" "+(x.currency||""):null],["Destino",x.destination],["Precisa até",x.needed_by?date(x.needed_by):null]]),
         x.details?h("p",{style:"white-space:pre-wrap;margin:1rem 0 0"},x.details):null]),
-      h("div",{class:"card"},[h("h3",null,"Comprador"),dl([["Empresa",b.company_name],["CNPJ",b.cnpj],["Contato",b.contact_name],["E-mail",b.email],["Telefone",b.phone],["Cidade",[b.city,b.state].filter(Boolean).join("/")],["Segmento",b.segment]]),
+      h("div",{class:"card"},[h("h3",null,"Comprador"),dl([["Empresa",b.company_name],["CNPJ",b.cnpj],["Contato",b.contact_name],["Cargo",b.job_title],["E-mail",b.email],["Telefone",b.phone],["Cidade",[b.city,b.state].filter(Boolean).join("/")],["Segmento",b.segment]]),
         h("div",{class:"field",style:"margin:1rem 0 0"},[h("label",{for:"srcNotes"},"Anotações internas"),notes])]),
       h("div",{class:"card"},[h("h3",null,"Fornecedores ("+(q.data||[]).length+")"),
         (q.data||[]).map(function(y){var s2=one(y.suppliers)||{};return h("p",{style:"margin:.3rem 0"},[h("a",{href:"#/"+y.id},y.code)," · "+(s2.company_name||"")+" · ",pill(y.status)," · "+(y.rfq_quotes||[]).length+" cotação(ões)"]);}),
