@@ -100,6 +100,19 @@ header .btn{padding:.55rem 1.05rem;font-size:.95rem}
 .stat b{display:block;font-size:clamp(2rem,3.4vw,2.7rem);line-height:1.05;letter-spacing:-.02em}
 .stat span{display:block;color:#C9CFE4;margin-top:.6rem;font-size:.96rem;max-width:24ch}
 .src{color:#8E97B8;font-size:.82rem;margin:2rem 0 0}
+/* Compacto: mais largura, menos altura */
+.numbers{padding:3rem 0}
+.num-top{display:grid;grid-template-columns:1fr 1.05fr;gap:2.5rem;align-items:center;text-align:left}
+.num-top h2{margin:0 0 .6rem;max-width:none}
+.num-top .sub{margin:0}
+.num-top .market{margin:0;padding:1.4rem 1.5rem 1.2rem}
+.num-top .market-bar{margin:1.1rem 0 .7rem}
+.stat-grid{margin-top:1.6rem;gap:1rem}
+.stat{padding:1.2rem 1rem 1rem}
+.stat b{font-size:clamp(1.6rem,2.6vw,2.1rem)}
+.stat span{margin-top:.35rem;font-size:.9rem;max-width:28ch}
+.numbers .src{margin-top:1.2rem}
+@media (max-width:900px){.num-top{grid-template-columns:1fr;gap:1.4rem}}
 .market{max-width:860px;margin:2.5rem auto 0;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:2rem 1.6rem 1.6rem}
 .market-total b{display:block;font-size:clamp(2.6rem,6vw,4.2rem);line-height:1;letter-spacing:-.03em}
 .market-total span{display:block;color:#C9CFE4;margin-top:.5rem}
@@ -127,6 +140,15 @@ header .btn{padding:.55rem 1.05rem;font-size:.95rem}
 .bars .val{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
 .bars-src{color:var(--muted);font-size:.82rem;margin:1rem 0 0;text-align:right}
 .callout{max-width:860px;margin:1.4rem auto 0;background:rgba(242,163,58,.12);border:1px solid rgba(242,163,58,.4);border-radius:12px;padding:1rem 1.2rem}
+/* Compacto: barras em duas colunas */
+section:has(> .sectors){padding:3rem 0}
+.sectors .section-intro{max-width:80ch}
+.bars-card{max-width:none;margin-top:1.4rem;padding:1rem 1.4rem}
+.bars{display:grid;grid-template-columns:1fr 1fr;column-gap:2.2rem}
+.bars li:nth-last-child(2){border-bottom:0}
+.bars-src{margin-top:.6rem}
+.callout{max-width:none;margin-top:1rem;padding:.75rem 1.1rem}
+@media (max-width:900px){.bars{grid-template-columns:1fr}.bars li:nth-last-child(2){border-bottom:1px solid var(--line)}}
 @media (max-width:520px){.bars li{grid-template-columns:1fr 4.2rem}.bars .track{grid-column:1/-1;grid-row:2}.bars-card{padding:1.2rem}}
 
 /* RFQ highlight */
@@ -231,6 +253,7 @@ input:focus,select:focus{border-color:var(--focus);outline:none;box-shadow:0 0 0
 
 /* FAQ */
 .faq{max-width:780px}
+#faq{border-top:1px solid var(--line)}
 details{border-bottom:1px solid var(--line);padding:.95rem 0}
 summary{cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:1rem}
 summary::-webkit-details-marker{display:none}
@@ -293,8 +316,6 @@ details p{margin:.6rem 0 0;color:var(--muted)}
 .lead-back{background:none;border:0;color:#5A6178;font:inherit;font-size:.9rem;cursor:pointer;padding:0;margin-top:.7rem;text-decoration:underline}
 @media (max-width:900px){.hero .wrap{grid-template-columns:1fr}.lead-card{padding:1.3rem}}
 
-/* Faixa da oferta: 6 meses grátis, logo abaixo do topo */
-@media (max-width:820px){
 /* Barras clicáveis: levam ao formulário com a categoria escolhida */
 .bars li[data-cat]{cursor:pointer;border-radius:8px}
 #rfqCard dd.flash,#rfqNo.flash{animation:rfqflash 1.2s ease}
@@ -342,6 +363,36 @@ footer .logo svg{height:34px}
 footer a{color:#fff}
 .wa-float{position:fixed;right:1.1rem;bottom:calc(1.1rem + env(safe-area-inset-bottom,0px));z-index:8;width:56px;height:56px;border-radius:50%;background:#25D366;display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,.25)}
 .wa-float svg{width:30px;height:30px;fill:#fff}
+
+/* Harmonia entre os blocos: fundos alternados, mesmo ritmo de espaço, faixa da marca nas passagens escuro/claro */
+:root{--brand-line:linear-gradient(90deg,#FF9100 0%,#F2A33A 35%,#0E9466 70%,#00C853 100%)}
+main > section{position:relative}
+#register,#rfq,#how,.surface,#faq{padding:4rem 0}
+section[aria-labelledby="pact-title"]{padding:3.25rem 0}
+.surface{border-top:0;border-bottom:0}
+#faq{background:var(--surface);border-top:0}
+/* passagem suave entre o branco e o cinza claro */
+main > section:not(.hero):not(.numbers):not(.final)+section:not(.numbers):not(.final)::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--line) 15%,var(--line) 85%,transparent)}
+/* faixa da marca: fim da abertura, entrada dos números e do rodapé */
+.numbers::before,footer::before{content:"";position:absolute;left:0;right:0;height:3px;background:var(--brand-line)}
+.hero-line{position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--brand-line)}
+.numbers{position:relative}
+.numbers::before{top:0}
+footer{position:relative}
+footer::before{top:0}
+/* marca discreta acima dos títulos, igual em todos os blocos claros */
+#reg-title::before,#sec-title::before,#rfq-title::before,#how-title::before,#why-title::before,#faq-title::before{content:"";display:block;width:44px;height:4px;border-radius:2px;background:var(--brand-line);margin:0 0 .9rem}
+#sec-title::before{margin-left:auto;margin-right:auto}
+/* Por que nós → comparativo: respiro e linha fina entre as duas partes */
+.why+h2{padding-top:2.4rem;border-top:1px solid var(--line)}
+.pact{position:relative;overflow:hidden}
+.pact::before{content:"";position:absolute;top:0;left:0;right:0;height:5px;background:var(--brand-line)}
+/* chamada final mais próxima do rodapé */
+.final{background:linear-gradient(160deg,#0B7A55 0%,#0A6B4B 100%)}
+/* entrada suave dos blocos ao rolar (só com JavaScript e sem "reduzir movimento") */
+.rv-on main > section:not(.hero) > .wrap{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+.rv-on main > section:not(.hero) > .wrap.rv-in{opacity:1;transform:none}
+@media (prefers-reduced-motion: reduce){.rv-on main > section > .wrap{opacity:1!important;transform:none!important}}
 </style>
 </head>
 <body>
@@ -387,6 +438,7 @@ footer a{color:#fff}
 
 <section class="hero" aria-labelledby="hero-title">
   <div class="hero-bg" role="img" aria-label="Container ship being loaded at a port"></div>
+  <div class="hero-line" aria-hidden="true"></div>
   <div class="wrap">
     <div>
       <span class="kicker caps">For Indian manufacturers · India × Brazil trade facilitation</span>
@@ -478,9 +530,12 @@ footer a{color:#fff}
 
 <section class="numbers" id="numbers" aria-labelledby="num-title">
   <div class="wrap">
+    <div class="num-top">
+    <div>
     <h2 id="num-title">Brazil imports US$ 280 billion a year. India supplies only 3%.</h2>
     <p class="sub">Brazilian companies buy machinery, chemicals, auto parts, pharma and much more from the world. Every dollar still bought from other countries is an opportunity for Indian suppliers.</p>
     <!-- Tamanho do mercado: importações do Brasil do mundo x da Índia (Secex/MDIC, 2025) -->
+    </div>
     <div class="market">
       <div class="market-total"><b>US$ 280 bn</b><span>Brazil’s imports from the world in 2025</span></div>
       <div class="market-bar" role="img" aria-label="India supplies 3% of Brazil’s imports; the rest of the world supplies 97%">
@@ -490,6 +545,7 @@ footer a{color:#fff}
         <span><i class="dot in"></i><b>India · US$ 8.4 bn (3%)</b></span>
         <span><i class="dot rest"></i>Rest of the world · US$ 272 bn (97%)</span>
       </div>
+    </div>
     </div>
     <div class="stat-grid">
       <div class="stat"><b>US$ 8.4 bn</b><span>Brazil’s imports from India in 2025, up 21% on 2024</span></div>
@@ -862,6 +918,15 @@ footer a{color:#fff}
     fetch(SUPABASE_URL+"/rest/v1/supplier_leads",{method:"POST",headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(lead),keepalive:true})
       .catch(function(){}).then(function(){if(!done){done=true;clearTimeout(timer);go();}});
   });
+})();
+</script>
+<script>
+// Entrada suave dos blocos ao rolar a página
+(function(){
+  if(!("IntersectionObserver" in window)||matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  document.documentElement.classList.add("rv-on");
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("rv-in");io.unobserve(e.target);}});},{rootMargin:"0px 0px -8% 0px"});
+  document.querySelectorAll("main > section:not(.hero) > .wrap").forEach(function(w){io.observe(w);});
 })();
 </script>
 </body>
