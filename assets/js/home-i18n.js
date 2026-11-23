@@ -11,6 +11,7 @@
   "India Brazil | Receive Quotation Requests from Brazilian Buyers":["India Brazil | ब्राज़ील के खरीदारों से कोटेशन अनुरोध पाएँ","India Brazil | Receba pedidos de cotação de compradores brasileiros","India Brazil | Reciba solicitudes de cotización de compradores brasileños"],
   "Market":["बाज़ार","Mercado","Mercado"],
   "Quotation requests":["कोटेशन अनुरोध","Pedidos de cotação","Solicitudes de cotización"],
+  "Supplier login":["आपूर्तिकर्ता लॉगिन","Área do fornecedor","Acceso de proveedor"],
   "How it works":["यह कैसे काम करता है","Como funciona","Cómo funciona"],
   "FAQ":["सवाल-जवाब","Dúvidas","Preguntas"],
   "Get 6 months free":["6 महीने मुफ़्त पाएँ","Ganhe 6 meses grátis","Obtenga 6 meses gratis"],
