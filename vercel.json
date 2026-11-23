@@ -3,6 +3,18 @@
   "trailingSlash": false,
   "redirects": [
     {
+      "source": "/",
+      "has": [{ "type": "host", "value": "indiabrasil.com.br" }],
+      "destination": "/marketplace",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "www.indiabrasil.com.br" }],
+      "destination": "/marketplace",
+      "permanent": false
+    },
+    {
       "source": "/docs/:path*",
       "destination": "/",
       "permanent": false
