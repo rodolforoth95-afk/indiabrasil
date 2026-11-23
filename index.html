@@ -52,9 +52,9 @@ header .wrap{display:flex;align-items:center;justify-content:space-between;heigh
 .logo{display:block;line-height:0}
 .logo svg{height:40px;width:auto}
 nav{display:flex;align-items:center;gap:1.5rem}
-nav a.nl{color:#C9CFE4;text-decoration:none;font-weight:500;font-size:.95rem}
+nav a.nl{color:#C9CFE4;text-decoration:none;font-weight:500;font-size:.95rem;white-space:nowrap}
 nav a.nl:hover{color:#fff}
-@media (max-width:860px){nav a.nl{display:none}}
+@media (max-width:1000px){nav a.nl{display:none}}
 @media (max-width:420px){.logo svg{height:32px}}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;font:inherit;font-weight:600;border-radius:8px;padding:.85rem 1.4rem;border:2px solid transparent;cursor:pointer;text-decoration:none;line-height:1.2;transition:filter .15s,border-color .15s}
 .btn-primary{background:var(--green);color:#fff}
@@ -64,9 +64,9 @@ nav a.nl:hover{color:#fff}
 .btn-saffron{background:var(--saffron);color:#1B1300}
 .btn-saffron:hover{filter:brightness(1.05)}
 header .btn{padding:.55rem 1.05rem;font-size:.95rem}
-.btn-login{color:#E6EAF5;border-color:rgba(255,255,255,.3)}
-.btn-login:hover{border-color:#fff;color:#fff}
-.btn-login svg{width:16px;height:16px}
+header .btn-login{padding:.42rem .8rem;font-size:.88rem;font-weight:500;gap:.4rem;color:#E6EAF5;border-color:rgba(255,255,255,.28)}
+header .btn-login:hover{border-color:#fff;color:#fff}
+header .btn-login svg{width:15px;height:15px}
 
 /* Hero */
 .hero{position:relative;color:#fff;min-height:min(90vh,780px);display:flex;align-items:center;overflow:hidden;margin-top:-68px;padding:124px 0 76px}
